@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Crosshair, Mail, Lock, User as UserIcon, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
@@ -29,10 +28,17 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // Redirect if already signed in
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate({ to: "/" });
+    });
+
+    // Redirect if already signed in. This also catches the session created after
+    // Supabase exchanges the Google OAuth code on the callback URL.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/" });
     });
+
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -74,10 +80,17 @@ function AuthPage() {
     setError(null);
     setBusy(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      if (result.error) throw result.error;
-      if (result.redirected) return;
-      navigate({ to: "/" });
+      const { error: signErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+      if (signErr) throw signErr;
     } catch (err: any) {
       setError(err?.message ?? "Не удалось войти через Google");
       setBusy(false);
