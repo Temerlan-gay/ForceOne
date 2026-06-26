@@ -81,7 +81,9 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -96,15 +98,28 @@
   text-shadow: 0 0 14px color-mix(in oklch, var(--neon) 80%, transparent);
 }
 @utility border-glow-primary {
-  box-shadow: 0 0 0 1px var(--primary), 0 0 24px -4px color-mix(in oklch, var(--primary) 70%, transparent);
+  box-shadow:
+    0 0 0 1px var(--primary),
+    0 0 24px -4px color-mix(in oklch, var(--primary) 70%, transparent);
 }
 @utility clip-corner {
-  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  clip-path: polygon(
+    12px 0,
+    100% 0,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    0 100%,
+    0 12px
+  );
 }
 
 @keyframes sz-scan {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
 }
 @utility scanline {
   position: relative;
@@ -115,7 +130,12 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--neon) 25%, transparent), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--neon) 25%, transparent),
+      transparent
+    );
     animation: sz-scan 2.4s linear infinite;
     pointer-events: none;
   }

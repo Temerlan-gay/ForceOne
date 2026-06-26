@@ -7,13 +7,26 @@ import type { Agent } from "@/game/data/agents";
 import { AgentAvatar } from "@/game/AgentAvatar";
 import { playAgentLine, prefetchAgentLines } from "@/game/voice";
 import {
-  RoundBanner, RoundObjective, KillFeed, Minimap,
-  BuyPhaseOverlay, RoundEndOverlay, MatchEndOverlay,
+  RoundBanner,
+  RoundObjective,
+  KillFeed,
+  Minimap,
+  BuyPhaseOverlay,
+  RoundEndOverlay,
+  MatchEndOverlay,
 } from "@/game/RoundHUD";
-import { createInitialRound, ROUND_CONFIG, type KillFeedEntry, type RoundState } from "@/game/round";
+import {
+  createInitialRound,
+  ROUND_CONFIG,
+  type KillFeedEntry,
+  type RoundState,
+} from "@/game/round";
 
 export function FPSGame({
-  cfg, settings, agent, onExit,
+  cfg,
+  settings,
+  agent,
+  onExit,
 }: {
   cfg: GameConfig;
   settings: Settings;
@@ -41,8 +54,8 @@ export function FPSGame({
   const pushFeed = (e: Omit<KillFeedEntry, "id" | "ts">) => {
     feedIdRef.current += 1;
     const entry: KillFeedEntry = { ...e, id: feedIdRef.current, ts: performance.now() };
-    setFeed(f => [...f.slice(-12), entry]);
-    setTimeout(() => setFeed(f => f.filter(x => x.id !== entry.id)), 6000);
+    setFeed((f) => [...f.slice(-12), entry]);
+    setTimeout(() => setFeed((f) => f.filter((x) => x.id !== entry.id)), 6000);
   };
 
   // ===== Boot engine — force deathmatch end-condition off; rounds drive the match =====
@@ -57,7 +70,12 @@ export function FPSGame({
         if (s.kills > prevKillsRef.current) {
           const delta = s.kills - prevKillsRef.current;
           for (let i = 0; i < delta; i++) {
-            pushFeed({ killer: agent.name, victim: "ENEMY", hue: agent.hue, headshot: Math.random() < 0.35 });
+            pushFeed({
+              killer: agent.name,
+              victim: "ENEMY",
+              hue: agent.hue,
+              headshot: Math.random() < 0.35,
+            });
           }
         }
         if (s.deaths > prevDeathsRef.current) {
@@ -71,7 +89,9 @@ export function FPSGame({
       },
       onKill: () => playAgentLine(agent, "kill"),
       onRespawn: () => playAgentLine(agent, "respawn"),
-      onEnd: () => { /* round system handles match end */ },
+      onEnd: () => {
+        /* round system handles match end */
+      },
     });
     engine.setPaused(true); // start in buy phase
     engineRef.current = engine;
@@ -79,7 +99,9 @@ export function FPSGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { engineRef.current?.updateSettings(settings); }, [settings]);
+  useEffect(() => {
+    engineRef.current?.updateSettings(settings);
+  }, [settings]);
 
   // ===== Round phase ticker =====
   useEffect(() => {
@@ -93,7 +115,13 @@ export function FPSGame({
 
       if (r.phase === "buy" && now >= r.phaseEndAt) {
         engine.setPaused(false);
-        setRound({ ...r, phase: "live", phaseEndAt: now + ROUND_CONFIG.liveSec * 1000, roundKills: 0, roundDeaths: 0 });
+        setRound({
+          ...r,
+          phase: "live",
+          phaseEndAt: now + ROUND_CONFIG.liveSec * 1000,
+          roundKills: 0,
+          roundDeaths: 0,
+        });
       } else if (r.phase === "live") {
         // sync round counters
         if (liveKills !== r.roundKills || liveDeaths !== r.roundDeaths) {
@@ -105,7 +133,8 @@ export function FPSGame({
         if (won || timedOut) {
           const result: "won" | "lost" = won ? "won" : "lost";
           const newScore = { ...r.score };
-          if (won) newScore.you += 1; else newScore.enemy += 1;
+          if (won) newScore.you += 1;
+          else newScore.enemy += 1;
           engine.setPaused(true);
           playAgentLine(agent, won ? "victory" : "defeat");
           setRound({
@@ -125,7 +154,11 @@ export function FPSGame({
         const enemyWon = r.score.enemy >= ROUND_CONFIG.toWin;
         const lastRound = r.round >= ROUND_CONFIG.maxRounds;
         if (youWon || enemyWon || lastRound) {
-          setRound({ ...r, phase: "match-end", matchWon: youWon || (lastRound && r.score.you > r.score.enemy) });
+          setRound({
+            ...r,
+            phase: "match-end",
+            matchWon: youWon || (lastRound && r.score.you > r.score.enemy),
+          });
           return;
         }
         // next round — reset engine state & baselines
@@ -135,9 +168,13 @@ export function FPSGame({
         prevKillsRef.current = 0;
         prevDeathsRef.current = 0;
         setRound({
-          ...r, phase: "buy", round: r.round + 1,
+          ...r,
+          phase: "buy",
+          round: r.round + 1,
           phaseEndAt: now + ROUND_CONFIG.buySec * 1000,
-          roundKills: 0, roundDeaths: 0, lastRoundResult: undefined,
+          roundKills: 0,
+          roundDeaths: 0,
+          lastRoundResult: undefined,
         });
       }
     }, 150);
@@ -151,12 +188,16 @@ export function FPSGame({
     engine?.dispose();
     const profile = loadProfile();
     const next = addMatchResult(profile, {
-      won, kills: r.totalKills, deaths: r.totalDeaths, mode: cfg.mode,
+      won,
+      kills: r.totalKills,
+      deaths: r.totalDeaths,
+      mode: cfg.mode,
     });
     onExit(next, { won, kills: r.totalKills, deaths: r.totalDeaths });
   };
 
-  const modeLabel = cfg.mode === "quick" ? "Быстрая" : cfg.mode === "unranked" ? "Безранговый" : "Рейтинговый";
+  const modeLabel =
+    cfg.mode === "quick" ? "Быстрая" : cfg.mode === "unranked" ? "Безранговый" : "Рейтинговый";
 
   return (
     <div className="fixed inset-0 bg-background">
@@ -177,8 +218,12 @@ export function FPSGame({
           <div className="absolute top-3 left-4 flex items-center gap-3 bg-card/80 backdrop-blur px-3 py-2 border border-border clip-corner pointer-events-none animate-fade-in">
             <AgentAvatar agent={agent} size={36} />
             <div>
-              <div className="text-[9px] text-muted-foreground uppercase tracking-widest">{modeLabel}</div>
-              <div className="text-base font-black leading-none" style={{ color: agent.hue }}>{agent.name}</div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-widest">
+                {modeLabel}
+              </div>
+              <div className="text-base font-black leading-none" style={{ color: agent.hue }}>
+                {agent.name}
+              </div>
             </div>
           </div>
 
@@ -196,30 +241,88 @@ export function FPSGame({
           {/* Bottom HUD: HP / abilities / ammo */}
           <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-end pointer-events-none gap-4">
             <div className="bg-card/80 backdrop-blur px-4 py-3 border border-border min-w-52 clip-corner">
-              <div className="flex justify-between text-xs mb-1"><span>HP</span><span className="font-bold">{Math.max(0, Math.round(state.hp))}</span></div>
-              <div className="h-1.5 bg-secondary overflow-hidden"><div className="h-full bg-destructive transition-all" style={{ width: `${Math.max(0, state.hp)}%` }} /></div>
-              <div className="flex justify-between text-xs mt-2 mb-1"><span>Броня</span><span className="font-bold">{Math.max(0, Math.round(state.armor))}</span></div>
-              <div className="h-1.5 bg-secondary overflow-hidden"><div className="h-full bg-accent transition-all" style={{ width: `${Math.max(0, state.armor)}%` }} /></div>
+              <div className="flex justify-between text-xs mb-1">
+                <span>HP</span>
+                <span className="font-bold">{Math.max(0, Math.round(state.hp))}</span>
+              </div>
+              <div className="h-1.5 bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-destructive transition-all"
+                  style={{ width: `${Math.max(0, state.hp)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs mt-2 mb-1">
+                <span>Броня</span>
+                <span className="font-bold">{Math.max(0, Math.round(state.armor))}</span>
+              </div>
+              <div className="h-1.5 bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-accent transition-all"
+                  style={{ width: `${Math.max(0, state.armor)}%` }}
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
-              {(["q","e","x"] as const).map(k => {
+              {(["c", "q", "e", "x"] as const).map((k) => {
                 const ab = state.abilities[k];
-                const label = k === "q" ? agent.abilities.q : k === "e" ? agent.abilities.e : agent.abilities.ult;
+                const label =
+                  k === "c"
+                    ? agent.abilities.c
+                    : k === "q"
+                      ? agent.abilities.q
+                      : k === "e"
+                        ? agent.abilities.e
+                        : agent.abilities.ult;
                 return (
-                  <div key={k} className="bg-card/80 backdrop-blur w-24 h-20 border border-border flex flex-col items-center justify-center px-1 clip-corner" title={label}>
-                    <div className="text-[9px] uppercase text-muted-foreground truncate w-full text-center">{label}</div>
-                    <div className={`text-2xl font-black ${ab.charges > 0 ? "" : "text-muted-foreground"}`} style={ab.charges > 0 ? { color: agent.hue } : undefined}>{k.toUpperCase()}</div>
-                    <div className="text-[10px]">{ab.charges > 0 ? `${ab.charges}/${ab.max}` : `${Math.ceil(ab.cd)}s`}</div>
+                  <div
+                    key={k}
+                    className="relative bg-card/85 backdrop-blur w-28 h-20 border flex flex-col items-center justify-center px-2 clip-corner overflow-hidden"
+                    title={label}
+                    style={{
+                      borderColor: ab.charges > 0 ? `${agent.hue}88` : "var(--color-border)",
+                      boxShadow: ab.charges > 0 ? `0 0 20px ${agent.hue}22` : undefined,
+                    }}
+                  >
+                    <div
+                      className="absolute inset-x-0 bottom-0 h-1"
+                      style={{
+                        background: agent.hue,
+                        opacity: ab.charges > 0 ? 0.9 : 0.25,
+                        transform: `scaleX(${ab.charges > 0 ? ab.charges / ab.max : 1 - Math.min(1, ab.cd / ab.cooldown)})`,
+                        transformOrigin: "left",
+                      }}
+                    />
+                    <div
+                      className="absolute -right-5 -top-8 w-16 h-16 rounded-full blur-2xl opacity-30"
+                      style={{ background: agent.hue }}
+                    />
+                    <div className="relative text-[9px] uppercase text-muted-foreground truncate w-full text-center">
+                      {label}
+                    </div>
+                    <div
+                      className={`relative text-2xl font-black ${ab.charges > 0 ? "" : "text-muted-foreground"}`}
+                      style={ab.charges > 0 ? { color: agent.hue, textShadow: `0 0 14px ${agent.hue}` } : undefined}
+                    >
+                      {k.toUpperCase()}
+                    </div>
+                    <div className="relative text-[10px] tabular-nums">
+                      {ab.charges > 0 ? `${ab.charges}/${ab.max}` : `${Math.ceil(ab.cd)}s`}
+                    </div>
                   </div>
                 );
               })}
             </div>
 
             <div className="bg-card/80 backdrop-blur px-5 py-3 border border-border text-right min-w-44 clip-corner">
-              <div className="text-4xl font-black text-primary leading-none">{state.mag}<span className="text-lg text-muted-foreground"> / {state.ammo}</span></div>
+              <div className="text-4xl font-black text-primary leading-none">
+                {state.mag}
+                <span className="text-lg text-muted-foreground"> / {state.ammo}</span>
+              </div>
               <div className="text-xs text-muted-foreground mt-1">
-                {state.reloading > 0 ? `Перезарядка ${state.reloading.toFixed(1)}s` : "R — перезарядка"}
+                {state.reloading > 0
+                  ? `Перезарядка ${state.reloading.toFixed(1)}s`
+                  : "R — перезарядка"}
               </div>
             </div>
           </div>
@@ -232,7 +335,10 @@ export function FPSGame({
           )}
 
           {state.flashed > 0 && (
-            <div className="absolute inset-0 bg-white pointer-events-none" style={{ opacity: Math.min(1, state.flashed / 2) }} />
+            <div
+              className="absolute inset-0 bg-white pointer-events-none"
+              style={{ opacity: Math.min(1, state.flashed / 2) }}
+            />
           )}
 
           {/* Top-right exit (during play) */}
@@ -254,10 +360,20 @@ export function FPSGame({
               }}
             >
               <div className="text-center space-y-3">
-                <div className="text-3xl font-black" style={{ color: agent.hue }}>Кликни чтобы захватить мышь</div>
-                <div className="text-muted-foreground">WASD — движение • Мышь — обзор • ЛКМ — огонь • R — перезарядка</div>
-                <div className="text-muted-foreground">Q — {agent.abilities.q} • E — {agent.abilities.e} • X — {agent.abilities.ult} • Esc — выйти из захвата</div>
-                <div className="text-xs text-muted-foreground/70 mt-2">Round 1: {ROUND_CONFIG.killTarget} киллов за {ROUND_CONFIG.liveSec}s · First to {ROUND_CONFIG.toWin}</div>
+                <div className="text-3xl font-black" style={{ color: agent.hue }}>
+                  Кликни чтобы захватить мышь
+                </div>
+                <div className="text-muted-foreground">
+                  WASD — движение • Мышь — обзор • ЛКМ — огонь • R — перезарядка
+                </div>
+                <div className="text-muted-foreground">
+                  C — {agent.abilities.c} • Q — {agent.abilities.q} • E — {agent.abilities.e} • X —{" "}
+                  {agent.abilities.ult} • Esc — выйти из захвата
+                </div>
+                <div className="text-xs text-muted-foreground/70 mt-2">
+                  Round 1: {ROUND_CONFIG.killTarget} киллов за {ROUND_CONFIG.liveSec}s · First to{" "}
+                  {ROUND_CONFIG.toWin}
+                </div>
               </div>
             </div>
           )}

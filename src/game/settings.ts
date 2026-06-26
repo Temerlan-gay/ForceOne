@@ -20,9 +20,15 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
     return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch { return { ...DEFAULT_SETTINGS }; }
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
 }
 
 export function saveSettings(s: Settings) {
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
+  try {
+    localStorage.setItem(KEY, JSON.stringify(s));
+  } catch {
+    // Ignore storage failures, such as private mode or disabled localStorage.
+  }
 }

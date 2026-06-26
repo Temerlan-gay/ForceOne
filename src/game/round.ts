@@ -71,9 +71,13 @@ export function createInitialRound(): RoundState {
 
 export function phaseLabel(p: RoundPhase): string {
   switch (p) {
-    case "buy": return "Buy Phase";
-    case "live": return "Round Live";
-    case "end": return "Round Over";
-    case "match-end": return "Match";
+    case "buy":
+      return "Buy Phase";
+    case "live":
+      return "Round Live";
+    case "end":
+      return "Round Over";
+    case "match-end":
+      return "Match";
   }
 }

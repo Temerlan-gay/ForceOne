@@ -14,7 +14,8 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     const resize = () => {
-      const w = host.clientWidth, h = host.clientHeight;
+      const w = host.clientWidth,
+        h = host.clientHeight;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -46,11 +47,44 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
     scene.add(disc);
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(1.55, 1.7, 64),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(agent.hue), transparent: true, opacity: 0.8 }),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(agent.hue),
+        transparent: true,
+        opacity: 0.8,
+      }),
     );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.01;
     scene.add(ring);
+
+    const outerRing = new THREE.Mesh(
+      new THREE.RingGeometry(2.05, 2.08, 96),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(agent.hue),
+        transparent: true,
+        opacity: 0.28,
+      }),
+    );
+    outerRing.rotation.x = -Math.PI / 2;
+    outerRing.position.y = 0.025;
+    scene.add(outerRing);
+
+    const shards = new THREE.Group();
+    const shardMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(agent.hue),
+      transparent: true,
+      opacity: 0.55,
+    });
+    for (let i = 0; i < 18; i++) {
+      const shard = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.18, 0.03), shardMat);
+      const a = (i / 18) * Math.PI * 2;
+      const r = 1.45 + (i % 3) * 0.18;
+      shard.position.set(Math.cos(a) * r, 0.22 + (i % 4) * 0.18, Math.sin(a) * r);
+      shard.userData.baseY = shard.position.y;
+      shard.rotation.set(i * 0.4, a, i * 0.23);
+      shards.add(shard);
+    }
+    scene.add(shards);
 
     const model = buildAgentModel(agent);
     scene.add(model);
@@ -70,6 +104,11 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
       // subtle idle bob
       model.position.y = Math.sin(t * 1.4) * 0.03;
       ring.rotation.z = -t * 0.3;
+      outerRing.rotation.z = t * 0.18;
+      shards.rotation.y = -t * 0.22;
+      shards.children.forEach((child, i) => {
+        child.position.y = child.userData.baseY + Math.sin(t * 1.8 + i) * 0.035;
+      });
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
     };

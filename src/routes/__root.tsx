@@ -78,17 +78,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Force One — Tactical FPS" },
-      { name: "description", content: "Force One — a tactical shooter combining Valorant's abilities with CS2's gunplay." },
+      {
+        name: "description",
+        content:
+          "Force One — a tactical shooter combining Valorant's abilities with CS2's gunplay.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Force One" },
-      { property: "og:description", content: "Force One — a tactical shooter combining Valorant's abilities with CS2's gunplay." },
+      {
+        property: "og:description",
+        content:
+          "Force One — a tactical shooter combining Valorant's abilities with CS2's gunplay.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Force One" },
-      { name: "twitter:description", content: "Force One — a tactical shooter combining Valorant's abilities with CS2's gunplay." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2fadadfa-158d-4846-b5d0-aeab69442ec9/id-preview-9dac5269--255cebd9-2828-4d9b-8350-686775f498ed.lovable.app-1782073859772.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2fadadfa-158d-4846-b5d0-aeab69442ec9/id-preview-9dac5269--255cebd9-2828-4d9b-8350-686775f498ed.lovable.app-1782073859772.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Force One — a tactical shooter combining Valorant's abilities with CS2's gunplay.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2fadadfa-158d-4846-b5d0-aeab69442ec9/id-preview-9dac5269--255cebd9-2828-4d9b-8350-686775f498ed.lovable.app-1782073859772.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2fadadfa-158d-4846-b5d0-aeab69442ec9/id-preview-9dac5269--255cebd9-2828-4d9b-8350-686775f498ed.lovable.app-1782073859772.png",
+      },
     ],
     links: [
       {

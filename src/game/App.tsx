@@ -2,17 +2,40 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "@tanstack/react-router";
 import { FPSGame } from "@/game/FPSGame";
 import type { GameConfig, MatchMode } from "@/game/types";
-import { loadProfile, saveProfile, fetchProfile, syncProfile, xpForLevel, type Profile } from "@/game/profile";
+import {
+  loadProfile,
+  saveProfile,
+  fetchProfile,
+  syncProfile,
+  xpForLevel,
+  type Profile,
+} from "@/game/profile";
 import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from "@/game/settings";
-import { AGENTS, type Agent } from "@/game/data/agents";
+import { AGENTS, ROLE_DETAILS, type Agent } from "@/game/data/agents";
 import { WEAPONS, CATEGORIES, type Weapon } from "@/game/data/weapons";
 import { MAPS, type GameMap } from "@/game/data/maps";
 import { AgentSelect } from "@/game/AgentSelect";
 
 import { useAuth, signOut } from "@/hooks/useAuth";
 import {
-  Crosshair, Trophy, Zap, Lock, Settings as SettingsIcon, Play,
-  Swords, Users, Package, Award, ShoppingBag, BarChart3, ChevronRight, Search, Volume2, Monitor, Activity, LogOut,
+  Crosshair,
+  Trophy,
+  Zap,
+  Lock,
+  Settings as SettingsIcon,
+  Play,
+  Swords,
+  Users,
+  Package,
+  Award,
+  ShoppingBag,
+  BarChart3,
+  ChevronRight,
+  Search,
+  Volume2,
+  Monitor,
+  Activity,
+  LogOut,
 } from "lucide-react";
 
 type Screen = "menu" | "agent_select" | "playing";
@@ -48,7 +71,9 @@ export function App() {
     saveProfile(profile);
     if (auth.user) syncProfile(auth.user.id, profile).catch(() => {});
   }, [profile, auth.user]);
-  useEffect(() => { saveSettings(settings); }, [settings]);
+  useEffect(() => {
+    saveSettings(settings);
+  }, [settings]);
 
   // Auth gate — redirect to /auth while loading is done
   if (!auth.loading && !auth.user) {
@@ -57,7 +82,9 @@ export function App() {
   if (auth.loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-xs uppercase tracking-[0.4em] text-muted-foreground animate-pulse">Загрузка…</div>
+        <div className="text-xs uppercase tracking-[0.4em] text-muted-foreground animate-pulse">
+          Загрузка…
+        </div>
       </div>
     );
   }
@@ -76,9 +103,9 @@ export function App() {
     setAgent(chosenAgent);
     setMap(rolledMap);
     const cfgMap: Record<MatchMode, GameConfig> = {
-      quick:    { mode: "quick",    killsToWin: 10, botCount: 3 },
+      quick: { mode: "quick", killsToWin: 10, botCount: 3 },
       unranked: { mode: "unranked", killsToWin: 15, botCount: 4 },
-      ranked:   { mode: "ranked",   killsToWin: 20, botCount: 5 },
+      ranked: { mode: "ranked", killsToWin: 20, botCount: 5 },
     };
     const playerName = profile.username || `Op_${profile.level}`;
     setCfg({
@@ -102,7 +129,11 @@ export function App() {
         map={rolledMap}
         initialAgent={agent}
         onLockIn={handleAgentLockIn}
-        onBack={() => { setScreen("menu"); setPendingMode(null); setRolledMap(null); }}
+        onBack={() => {
+          setScreen("menu");
+          setPendingMode(null);
+          setRolledMap(null);
+        }}
       />
     );
   }
@@ -142,16 +173,26 @@ export function App() {
         />
       </div>
 
-      <TopBar profile={profile} xpPct={xpPct} xpNeeded={xpNeeded} email={auth.user?.email ?? ""} onSignOut={signOut} />
+      <TopBar
+        profile={profile}
+        xpPct={xpPct}
+        xpNeeded={xpNeeded}
+        email={auth.user?.email ?? ""}
+        onSignOut={signOut}
+      />
 
       <div className="relative flex-1 flex">
         <SideNav nav={nav} onChange={setNav} />
 
         <main className="flex-1 overflow-y-auto px-8 py-8">
           {lastResult && (
-            <div className={`mb-6 p-4 rounded-md border backdrop-blur clip-corner ${lastResult.won
-              ? "bg-[var(--neon)]/10 border-[var(--neon)] text-[var(--neon)]"
-              : "bg-destructive/10 border-destructive text-destructive"}`}>
+            <div
+              className={`mb-6 p-4 rounded-md border backdrop-blur clip-corner ${
+                lastResult.won
+                  ? "bg-[var(--neon)]/10 border-[var(--neon)] text-[var(--neon)]"
+                  : "bg-destructive/10 border-destructive text-destructive"
+              }`}
+            >
               <div className="font-bold uppercase tracking-widest text-sm">
                 {lastResult.won ? "Victory · +XP начислено" : "Defeat · Попробуй снова"}
               </div>
@@ -169,12 +210,12 @@ export function App() {
               onStart={startMatch}
             />
           )}
-          {nav === "agents"     && <AgentsPage selected={agent} onPick={setAgent} />}
+          {nav === "agents" && <AgentsPage selected={agent} onPick={setAgent} />}
           {nav === "collection" && <CollectionPage />}
-          {nav === "career"     && <CareerPage profile={profile} />}
-          {nav === "store"      && <StorePage />}
+          {nav === "career" && <CareerPage profile={profile} />}
+          {nav === "store" && <StorePage />}
           {nav === "battlepass" && <BattlepassPage profile={profile} />}
-          {nav === "settings"   && <SettingsPage settings={settings} onChange={setSettings} />}
+          {nav === "settings" && <SettingsPage settings={settings} onChange={setSettings} />}
         </main>
       </div>
     </div>
@@ -182,7 +223,19 @@ export function App() {
 }
 
 /* ---------- Top bar ---------- */
-function TopBar({ profile, xpPct, xpNeeded, email, onSignOut }: { profile: Profile; xpPct: number; xpNeeded: number; email: string; onSignOut: () => void }) {
+function TopBar({
+  profile,
+  xpPct,
+  xpNeeded,
+  email,
+  onSignOut,
+}: {
+  profile: Profile;
+  xpPct: number;
+  xpNeeded: number;
+  email: string;
+  onSignOut: () => void;
+}) {
   return (
     <header className="relative z-10 border-b border-border bg-sidebar/80 backdrop-blur">
       <div className="px-6 h-16 flex items-center justify-between gap-6">
@@ -203,28 +256,41 @@ function TopBar({ profile, xpPct, xpNeeded, email, onSignOut }: { profile: Profi
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-card/60">
             <Activity className="w-3.5 h-3.5 text-[var(--neon)]" />
             <span className="text-[11px] font-mono text-muted-foreground">
-              PING <span className="text-foreground">12ms</span> · FPS <span className="text-foreground">144</span>
+              PING <span className="text-foreground">12ms</span> · FPS{" "}
+              <span className="text-foreground">144</span>
             </span>
           </div>
 
           <div className="text-right">
             <div className="text-[9px] text-muted-foreground uppercase tracking-[0.3em]">LVL</div>
-            <div className="text-2xl font-black text-[var(--neon)] leading-none text-glow-neon">{profile.level}</div>
+            <div className="text-2xl font-black text-[var(--neon)] leading-none text-glow-neon">
+              {profile.level}
+            </div>
           </div>
 
           <div className="w-48">
             <div className="flex justify-between text-[9px] text-muted-foreground mb-1 uppercase tracking-[0.3em]">
-              <span>Battle XP</span><span>{profile.xp} / {xpNeeded}</span>
+              <span>Battle XP</span>
+              <span>
+                {profile.xp} / {xpNeeded}
+              </span>
             </div>
             <div className="h-1.5 bg-secondary overflow-hidden border border-border">
-              <div className="h-full bg-gradient-to-r from-primary via-[var(--neon)] to-[var(--neon-pink)]" style={{ width: `${xpPct}%` }} />
+              <div
+                className="h-full bg-gradient-to-r from-primary via-[var(--neon)] to-[var(--neon-pink)]"
+                style={{ width: `${xpPct}%` }}
+              />
             </div>
           </div>
 
           <div className="flex items-center gap-2 pl-3 border-l border-border">
             <div
               className="w-9 h-9 grid place-items-center font-black text-sm clip-corner border border-border"
-              style={{ background: profile.avatar_color + "22", color: profile.avatar_color, borderColor: profile.avatar_color + "66" }}
+              style={{
+                background: profile.avatar_color + "22",
+                color: profile.avatar_color,
+                borderColor: profile.avatar_color + "66",
+              }}
               title={email}
             >
               {(profile.username || "U").charAt(0).toUpperCase()}
@@ -247,7 +313,6 @@ function TopBar({ profile, xpPct, xpNeeded, email, onSignOut }: { profile: Profi
   );
 }
 
-
 function LogoMark() {
   return (
     <div className="relative w-10 h-10">
@@ -262,15 +327,16 @@ function LogoMark() {
 
 /* ---------- Side nav ---------- */
 function SideNav({ nav, onChange }: { nav: NavKey; onChange: (n: NavKey) => void }) {
-  const items: { key: NavKey; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-    { key: "play",       label: "Играть",      Icon: Play },
-    { key: "agents",     label: "Агенты",      Icon: Users },
-    { key: "collection", label: "Коллекция",   Icon: Package },
-    { key: "career",     label: "Карьера",     Icon: BarChart3 },
-    { key: "store",      label: "Магазин",     Icon: ShoppingBag },
-    { key: "battlepass", label: "Battle Pass", Icon: Award },
-    { key: "settings",   label: "Настройки",   Icon: SettingsIcon },
-  ];
+  const items: { key: NavKey; label: string; Icon: React.ComponentType<{ className?: string }> }[] =
+    [
+      { key: "play", label: "Играть", Icon: Play },
+      { key: "agents", label: "Агенты", Icon: Users },
+      { key: "collection", label: "Коллекция", Icon: Package },
+      { key: "career", label: "Карьера", Icon: BarChart3 },
+      { key: "store", label: "Магазин", Icon: ShoppingBag },
+      { key: "battlepass", label: "Battle Pass", Icon: Award },
+      { key: "settings", label: "Настройки", Icon: SettingsIcon },
+    ];
 
   return (
     <aside className="relative z-10 w-60 shrink-0 border-r border-border bg-sidebar/60 backdrop-blur py-6 px-3 hidden md:flex flex-col gap-1">
@@ -286,7 +352,9 @@ function SideNav({ nav, onChange }: { nav: NavKey; onChange: (n: NavKey) => void
                 : "text-muted-foreground hover:text-foreground hover:bg-card/60 border border-transparent"
             }`}
           >
-            {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[var(--neon)]" />}
+            {active && (
+              <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[var(--neon)]" />
+            )}
             <Icon className={`w-4 h-4 ${active ? "text-[var(--neon)]" : ""}`} />
             <span className="text-sm font-bold uppercase tracking-wider">{label}</span>
             {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-[var(--neon)]" />}
@@ -295,7 +363,9 @@ function SideNav({ nav, onChange }: { nav: NavKey; onChange: (n: NavKey) => void
       })}
 
       <div className="mt-auto pt-6 border-t border-border">
-        <div className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] mb-2 px-3">Online</div>
+        <div className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] mb-2 px-3">
+          Online
+        </div>
         <div className="px-3 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[var(--neon)] animate-pulse" />
           <span className="text-xs text-muted-foreground">12 437 игроков</span>
@@ -307,24 +377,36 @@ function SideNav({ nav, onChange }: { nav: NavKey; onChange: (n: NavKey) => void
 
 /* ---------- PLAY ---------- */
 function PlayPage({
-  profile, agent, map, multiplayer, onToggleMultiplayer, onPickMap, onStart,
+  profile,
+  agent,
+  map,
+  multiplayer,
+  onToggleMultiplayer,
+  onPickMap,
+  onStart,
 }: {
-  profile: Profile; agent: Agent; map: GameMap;
-  multiplayer: boolean; onToggleMultiplayer: (v: boolean) => void;
-  onPickMap: (m: GameMap) => void; onStart: (m: MatchMode) => void;
+  profile: Profile;
+  agent: Agent;
+  map: GameMap;
+  multiplayer: boolean;
+  onToggleMultiplayer: (v: boolean) => void;
+  onPickMap: (m: GameMap) => void;
+  onStart: (m: MatchMode) => void;
 }) {
   const rankedLocked = profile.level < 15;
   return (
     <div>
-      <PageHeader eyebrow="Main Lobby" title="Готов к выходу" subtitle="Выбери режим, карту и агента — и в зону." />
+      <PageHeader
+        eyebrow="Main Lobby"
+        title="Готов к выходу"
+        subtitle="Выбери режим, карту и агента — и в зону."
+      />
 
       {/* Hero / map preview */}
       <div
         className="relative h-64 md:h-80 rounded-md border border-border overflow-hidden mb-8 clip-corner scanline scanline-after"
         style={{
-          background: map.image
-            ? `url(${map.image}) center/cover no-repeat`
-            : map.preview,
+          background: map.image ? `url(${map.image}) center/cover no-repeat` : map.preview,
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-tr from-background via-background/40 to-transparent" />
@@ -335,7 +417,9 @@ function PlayPage({
             </span>
           </div>
           <div>
-            <div className="text-4xl md:text-5xl font-black tracking-tight">{map.name.toUpperCase()}</div>
+            <div className="text-4xl md:text-5xl font-black tracking-tight">
+              {map.name.toUpperCase()}
+            </div>
             <div className="text-muted-foreground mt-1">{map.tagline}</div>
 
             <div className="mt-4 flex items-center gap-3 text-xs">
@@ -353,7 +437,9 @@ function PlayPage({
       {/* Multiplayer toggle */}
       <div className="mb-5 flex items-center justify-between bg-card/60 backdrop-blur border border-border p-4 clip-corner">
         <div className="flex items-center gap-3">
-          <Users className={`w-5 h-5 ${multiplayer ? "text-[var(--neon)]" : "text-muted-foreground"}`} />
+          <Users
+            className={`w-5 h-5 ${multiplayer ? "text-[var(--neon)]" : "text-muted-foreground"}`}
+          />
           <div>
             <div className="text-sm font-black uppercase tracking-widest">
               Сетевая игра {multiplayer && <span className="text-[var(--neon)]">· ONLINE</span>}
@@ -382,23 +468,31 @@ function PlayPage({
       {/* Modes */}
       <div className="grid md:grid-cols-3 gap-4 mb-10">
         <ModeCard
-          tag="01" title="Быстрая игра" subtitle="Без подбора, мгновенный старт"
+          tag="01"
+          title="Быстрая игра"
+          subtitle="Без подбора, мгновенный старт"
           details="10 фрагов · 3 бота · Base XP"
-          icon={<Zap className="w-8 h-8" />} variant="accent"
+          icon={<Zap className="w-8 h-8" />}
+          variant="accent"
           onClick={() => onStart("quick")}
         />
         <ModeCard
-          tag="02" title="Безранговый" subtitle="Полноценный матч без ранга"
+          tag="02"
+          title="Безранговый"
+          subtitle="Полноценный матч без ранга"
           details="15 фрагов · 4 бота · +50% XP"
-          icon={<Swords className="w-8 h-8" />} variant="primary"
+          icon={<Swords className="w-8 h-8" />}
+          variant="primary"
           onClick={() => onStart("unranked")}
         />
         <ModeCard
-          tag="03" title="Рейтинговый"
+          tag="03"
+          title="Рейтинговый"
           subtitle={rankedLocked ? "Открывается с 15 уровня" : "Матч за место в таблице"}
           details="20 фрагов · 5 ботов · +100% XP · ранг"
           icon={rankedLocked ? <Lock className="w-8 h-8" /> : <Trophy className="w-8 h-8" />}
-          variant="pink" locked={rankedLocked}
+          variant="pink"
+          locked={rankedLocked}
           lockHint={`Уровень ${profile.level} / 15`}
           onClick={() => onStart("ranked")}
         />
@@ -414,12 +508,12 @@ function PlayPage({
               key={m.id}
               onClick={() => onPickMap(m)}
               className={`group relative h-28 overflow-hidden border text-left clip-corner transition-all ${
-                sel ? "border-[var(--neon)] border-glow-primary" : "border-border hover:border-primary/60"
+                sel
+                  ? "border-[var(--neon)] border-glow-primary"
+                  : "border-border hover:border-primary/60"
               }`}
               style={{
-                background: m.image
-                  ? `url(${m.image}) center/cover no-repeat`
-                  : m.preview,
+                background: m.image ? `url(${m.image}) center/cover no-repeat` : m.preview,
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
@@ -445,9 +539,10 @@ function PlayPage({
           <KeyRow k="ЛКМ" label="Стрельба" />
           <KeyRow k="R" label="Перезарядка" />
           <KeyRow k="Мышь" label="Обзор" />
-          <KeyRow k="Q" label="Способность 1 — Flash" />
-          <KeyRow k="E" label="Способность 2 — Dash" />
-          <KeyRow k="X" label="Способность 3 — Smoke" />
+          <KeyRow k="C" label="Способность 1" />
+          <KeyRow k="Q" label="Способность 2" />
+          <KeyRow k="E" label="Способность 3" />
+          <KeyRow k="X" label="Ультимейт" />
           <KeyRow k="Shift" label="Тихий шаг (скоро)" />
         </div>
       </div>
@@ -464,7 +559,11 @@ function AgentsPage({ selected, onPick }: { selected: Agent; onPick: (a: Agent) 
   );
   return (
     <div>
-      <PageHeader eyebrow="Roster" title="Агенты" subtitle="10 уникальных оперативников. Каждый меняет правила боя." />
+      <PageHeader
+        eyebrow="Roster"
+        title="Агенты"
+        subtitle="10 уникальных оперативников. Каждый меняет правила боя."
+      />
 
       <div className="flex gap-2 mb-6 flex-wrap">
         {(["All", "Duelist", "Controller", "Sentinel", "Initiator"] as const).map((r) => (
@@ -477,7 +576,7 @@ function AgentsPage({ selected, onPick }: { selected: Agent; onPick: (a: Agent) 
                 : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
             }`}
           >
-            {r}
+            {r === "All" ? "Все" : ROLE_DETAILS[r].label}
           </button>
         ))}
       </div>
@@ -490,7 +589,9 @@ function AgentsPage({ selected, onPick }: { selected: Agent; onPick: (a: Agent) 
               key={a.id}
               onClick={() => onPick(a)}
               className={`group relative aspect-[3/4] overflow-hidden border text-left clip-corner transition-all ${
-                sel ? "border-[var(--neon)] border-glow-primary" : "border-border hover:border-primary/60"
+                sel
+                  ? "border-[var(--neon)] border-glow-primary"
+                  : "border-border hover:border-primary/60"
               }`}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${a.gradient}`} />
@@ -501,8 +602,14 @@ function AgentsPage({ selected, onPick }: { selected: Agent; onPick: (a: Agent) 
               />
               <div className="absolute inset-0 p-3 flex flex-col">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">{a.role}</span>
-                  {sel && <span className="text-[9px] text-[var(--neon)] uppercase tracking-widest">Active</span>}
+                  <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
+                    {ROLE_DETAILS[a.role].label}
+                  </span>
+                  {sel && (
+                    <span className="text-[9px] text-[var(--neon)] uppercase tracking-widest">
+                      Active
+                    </span>
+                  )}
                 </div>
                 <div className="mt-auto">
                   <div
@@ -511,7 +618,9 @@ function AgentsPage({ selected, onPick }: { selected: Agent; onPick: (a: Agent) 
                   >
                     {a.name.toUpperCase()}
                   </div>
-                  <div className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{a.tagline}</div>
+                  <div className="text-[10px] text-muted-foreground line-clamp-2 mt-1">
+                    {a.tagline}
+                  </div>
                 </div>
               </div>
             </button>
@@ -523,32 +632,67 @@ function AgentsPage({ selected, onPick }: { selected: Agent; onPick: (a: Agent) 
       <div className="bg-card/60 backdrop-blur border border-border p-6 clip-corner">
         <div className="flex items-baseline justify-between mb-4">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Выбранный агент</div>
-            <div className="text-3xl font-black" style={{ color: selected.hue }}>{selected.name.toUpperCase()}</div>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+              Выбранный агент
+            </div>
+            <div className="text-3xl font-black" style={{ color: selected.hue }}>
+              {selected.name.toUpperCase()}
+            </div>
           </div>
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">{selected.role}</span>
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">
+            {ROLE_DETAILS[selected.role].label}
+          </span>
         </div>
-        <p className="text-muted-foreground mb-6">{selected.tagline}</p>
-        <div className="grid md:grid-cols-3 gap-3">
-          <AbilityCard k="Q" name={selected.abilities.q} />
-          <AbilityCard k="E" name={selected.abilities.e} />
-          <AbilityCard k="X" name={selected.abilities.ult} ult />
+        <p className="text-muted-foreground mb-2">{selected.tagline}</p>
+        <p className="text-sm text-muted-foreground mb-6">
+          {ROLE_DETAILS[selected.role].combatStyle}
+        </p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <AbilityCard k="C" name={selected.abilities.c} accent={selected.hue} />
+          <AbilityCard k="Q" name={selected.abilities.q} accent={selected.hue} />
+          <AbilityCard k="E" name={selected.abilities.e} accent={selected.hue} />
+          <AbilityCard k="X" name={selected.abilities.ult} accent={selected.hue} ult />
         </div>
       </div>
     </div>
   );
 }
 
-function AbilityCard({ k, name, ult }: { k: string; name: string; ult?: boolean }) {
+function AbilityCard({
+  k,
+  name,
+  accent,
+  ult,
+}: {
+  k: string;
+  name: string;
+  accent: string;
+  ult?: boolean;
+}) {
   return (
-    <div className={`p-4 border ${ult ? "border-[var(--neon-pink)]/50" : "border-border"} bg-background/60`}>
+    <div
+      className="relative p-4 border bg-background/60 overflow-hidden"
+      style={{ borderColor: ult ? `${accent}99` : `${accent}44` }}
+    >
+      <div
+        className="absolute -right-8 -top-8 w-20 h-20 rounded-full blur-2xl opacity-25"
+        style={{ background: accent }}
+      />
       <div className="flex items-center gap-2 mb-2">
-        <kbd className="w-7 h-7 grid place-items-center bg-secondary border border-border font-mono text-xs">{k}</kbd>
-        <span className={`text-[10px] uppercase tracking-[0.3em] ${ult ? "text-[var(--neon-pink)]" : "text-muted-foreground"}`}>
+        <kbd
+          className="relative w-7 h-7 grid place-items-center bg-secondary border font-mono text-xs"
+          style={{ borderColor: accent, color: accent }}
+        >
+          {k}
+        </kbd>
+        <span
+          className="relative text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
+          style={ult ? { color: accent } : undefined}
+        >
           {ult ? "Ultimate" : "Ability"}
         </span>
       </div>
-      <div className="font-bold">{name}</div>
+      <div className="relative font-bold">{name}</div>
     </div>
   );
 }
@@ -560,14 +704,17 @@ function CollectionPage() {
   const list = useMemo(() => {
     return WEAPONS.filter(
       (w) =>
-        (cat === "All" || w.category === cat) &&
-        w.name.toLowerCase().includes(q.toLowerCase()),
+        (cat === "All" || w.category === cat) && w.name.toLowerCase().includes(q.toLowerCase()),
     );
   }, [q, cat]);
 
   return (
     <div>
-      <PageHeader eyebrow="Arsenal" title="Коллекция" subtitle="13 единиц оружия. Уникальные характеристики и отдача." />
+      <PageHeader
+        eyebrow="Arsenal"
+        title="Коллекция"
+        subtitle="13 единиц оружия. Уникальные характеристики и отдача."
+      />
 
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-64 max-w-md">
@@ -610,7 +757,9 @@ function WeaponCard({ w }: { w: Weapon }) {
     <div className="group bg-card/60 backdrop-blur border border-border hover:border-primary/60 p-5 clip-corner transition-all">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{w.category}</div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+            {w.category}
+          </div>
           <div className="text-xl font-black tracking-tight">{w.name.toUpperCase()}</div>
         </div>
         <div className="text-right">
@@ -621,7 +770,9 @@ function WeaponCard({ w }: { w: Weapon }) {
 
       <div
         className="h-20 mb-3 border border-border/60 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(80,160,255,0.06))" }}
+        style={{
+          background: "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(80,160,255,0.06))",
+        }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-3/4 h-2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
@@ -668,14 +819,18 @@ function CareerPage({ profile }: { profile: Profile }) {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-card/60 backdrop-blur border border-border p-6 clip-corner">
-          <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Текущий ранг</div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">
+            Текущий ранг
+          </div>
           <div className="text-4xl font-black text-primary text-glow-primary">{profile.rank}</div>
           <div className="mt-4 text-sm text-muted-foreground">
             Сыграй рейтинговый матч, чтобы продвинуться. Текущий уровень: {profile.level}.
           </div>
         </div>
         <div className="bg-card/60 backdrop-blur border border-border p-6 clip-corner">
-          <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">K / Match</div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">
+            K / Match
+          </div>
           <div className="text-4xl font-black text-[var(--neon)] text-glow-neon">{kpm}</div>
           <div className="mt-4 text-sm text-muted-foreground">
             Средние фраги за матч. Цель: 15+ для топ-перформанса.
@@ -685,7 +840,9 @@ function CareerPage({ profile }: { profile: Profile }) {
 
       <div className="mt-8 bg-card/60 backdrop-blur border border-border clip-corner">
         <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-          <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">История матчей</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+            История матчей
+          </div>
           <div className="text-[10px] text-muted-foreground">last 5</div>
         </div>
         <div className="divide-y divide-border">
@@ -697,11 +854,15 @@ function CareerPage({ profile }: { profile: Profile }) {
           {profile.matches > 0 &&
             [...Array(Math.min(5, profile.matches))].map((_, i) => (
               <div key={i} className="px-5 py-3 flex items-center gap-4 text-sm">
-                <span className={`text-xs font-bold uppercase tracking-widest ${i % 2 ? "text-[var(--neon)]" : "text-destructive"}`}>
+                <span
+                  className={`text-xs font-bold uppercase tracking-widest ${i % 2 ? "text-[var(--neon)]" : "text-destructive"}`}
+                >
                   {i % 2 ? "Win" : "Loss"}
                 </span>
                 <span className="text-muted-foreground">Quick Play</span>
-                <span className="ml-auto font-mono text-foreground">{13 + i}/{10 - i}</span>
+                <span className="ml-auto font-mono text-foreground">
+                  {13 + i}/{10 - i}
+                </span>
               </div>
             ))}
         </div>
@@ -715,22 +876,31 @@ function StorePage() {
   const featured = WEAPONS.slice(0, 4);
   return (
     <div>
-      <PageHeader eyebrow="Shop" title="Магазин" subtitle="Ежедневная ротация скинов и аксессуаров." />
+      <PageHeader
+        eyebrow="Shop"
+        title="Магазин"
+        subtitle="Ежедневная ротация скинов и аксессуаров."
+      />
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {featured.map((w, i) => (
           <div key={w.id} className="bg-card/60 backdrop-blur border border-border p-4 clip-corner">
             <div
               className="h-32 mb-3 border border-border/40"
               style={{
-                background: i % 2
-                  ? "linear-gradient(135deg, #1a0c3a 0%, #ff2cb4 100%)"
-                  : "linear-gradient(135deg, #06243a 0%, #2dd4ff 100%)",
+                background:
+                  i % 2
+                    ? "linear-gradient(135deg, #1a0c3a 0%, #ff2cb4 100%)"
+                    : "linear-gradient(135deg, #06243a 0%, #2dd4ff 100%)",
               }}
             />
-            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{w.category} · Skin</div>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+              {w.category} · Skin
+            </div>
             <div className="font-black tracking-tight">{w.name.toUpperCase()} · NEON</div>
             <div className="mt-3 flex items-center justify-between">
-              <span className="text-[var(--neon)] font-black">{(w.price * 4).toLocaleString()} VP</span>
+              <span className="text-[var(--neon)] font-black">
+                {(w.price * 4).toLocaleString()} VP
+              </span>
               <button className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest border border-primary text-primary hover:bg-primary/10">
                 Купить
               </button>
@@ -750,12 +920,18 @@ function BattlepassPage({ profile }: { profile: Profile }) {
   const tier = Math.min(50, Math.max(1, profile.level));
   return (
     <div>
-      <PageHeader eyebrow="Season 1" title="Battle Pass · Ignition" subtitle="50 уровней наград. Бесплатный и Премиум треки." />
+      <PageHeader
+        eyebrow="Season 1"
+        title="Battle Pass · Ignition"
+        subtitle="50 уровней наград. Бесплатный и Премиум треки."
+      />
 
       <div className="bg-card/60 backdrop-blur border border-border p-6 mb-6 clip-corner">
         <div className="flex justify-between items-end mb-3">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Текущий тир</div>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+              Текущий тир
+            </div>
             <div className="text-4xl font-black text-primary text-glow-primary">{tier} / 50</div>
           </div>
           <button className="px-5 py-2 bg-gradient-to-r from-primary to-[var(--neon-pink)] text-primary-foreground font-bold uppercase tracking-widest text-sm clip-corner">
@@ -763,7 +939,10 @@ function BattlepassPage({ profile }: { profile: Profile }) {
           </button>
         </div>
         <div className="h-1.5 bg-secondary border border-border overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-primary via-[var(--neon)] to-[var(--neon-pink)]" style={{ width: `${(tier / 50) * 100}%` }} />
+          <div
+            className="h-full bg-gradient-to-r from-primary via-[var(--neon)] to-[var(--neon-pink)]"
+            style={{ width: `${(tier / 50) * 100}%` }}
+          />
         </div>
       </div>
 
@@ -777,17 +956,25 @@ function BattlepassPage({ profile }: { profile: Profile }) {
               key={i}
               className={`relative aspect-square border ${
                 unlocked
-                  ? isUlt ? "border-[var(--neon-pink)] bg-[var(--neon-pink)]/10" : "border-[var(--neon)] bg-[var(--neon)]/10"
+                  ? isUlt
+                    ? "border-[var(--neon-pink)] bg-[var(--neon-pink)]/10"
+                    : "border-[var(--neon)] bg-[var(--neon)]/10"
                   : "border-border bg-card/40"
               } flex flex-col items-center justify-center clip-corner`}
             >
-              <div className={`text-[10px] uppercase tracking-widest ${unlocked ? "text-foreground" : "text-muted-foreground"}`}>
+              <div
+                className={`text-[10px] uppercase tracking-widest ${unlocked ? "text-foreground" : "text-muted-foreground"}`}
+              >
                 T{t}
               </div>
               {isUlt ? (
-                <Trophy className={`w-5 h-5 ${unlocked ? "text-[var(--neon-pink)]" : "text-muted-foreground"}`} />
+                <Trophy
+                  className={`w-5 h-5 ${unlocked ? "text-[var(--neon-pink)]" : "text-muted-foreground"}`}
+                />
               ) : (
-                <Package className={`w-5 h-5 ${unlocked ? "text-[var(--neon)]" : "text-muted-foreground"}`} />
+                <Package
+                  className={`w-5 h-5 ${unlocked ? "text-[var(--neon)]" : "text-muted-foreground"}`}
+                />
               )}
             </div>
           );
@@ -798,22 +985,38 @@ function BattlepassPage({ profile }: { profile: Profile }) {
 }
 
 /* ---------- SETTINGS PAGE ---------- */
-function SettingsPage({ settings, onChange }: { settings: Settings; onChange: (s: Settings) => void }) {
+function SettingsPage({
+  settings,
+  onChange,
+}: {
+  settings: Settings;
+  onChange: (s: Settings) => void;
+}) {
   return (
     <div className="max-w-3xl">
-      <PageHeader eyebrow="System" title="Настройки" subtitle="Чувствительность, поле зрения и графика." />
+      <PageHeader
+        eyebrow="System"
+        title="Настройки"
+        subtitle="Чувствительность, поле зрения и графика."
+      />
 
       <div className="space-y-6">
         <Panel icon={<Crosshair className="w-4 h-4" />} title="Прицеливание">
           <SliderRow
-            label="Чувствительность мыши" value={settings.sensitivity}
-            min={0.1} max={5} step={0.05}
+            label="Чувствительность мыши"
+            value={settings.sensitivity}
+            min={0.1}
+            max={5}
+            step={0.05}
             display={settings.sensitivity.toFixed(2)}
             onChange={(v) => onChange({ ...settings, sensitivity: v })}
           />
           <SliderRow
-            label="Поле зрения (FOV)" value={settings.fov}
-            min={60} max={110} step={1}
+            label="Поле зрения (FOV)"
+            value={settings.fov}
+            min={60}
+            max={110}
+            step={1}
             display={`${settings.fov}°`}
             onChange={(v) => onChange({ ...settings, fov: v })}
           />
@@ -841,14 +1044,16 @@ function SettingsPage({ settings, onChange }: { settings: Settings; onChange: (s
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Влияет на pixel ratio, сглаживание и дальность тумана. Применяется при следующем матче.
+              Влияет на pixel ratio, сглаживание и дальность тумана. Применяется при следующем
+              матче.
             </p>
           </div>
         </Panel>
 
         <Panel icon={<Volume2 className="w-4 h-4" />} title="Звук">
           <p className="text-sm text-muted-foreground">
-            Звуковая система (ElevenLabs) подключена. Реалистичные выстрелы, шаги и ульты появятся в следующем обновлении.
+            Звуковая система (ElevenLabs) подключена. Реалистичные выстрелы, шаги и ульты появятся в
+            следующем обновлении.
           </p>
         </Panel>
 
@@ -863,7 +1068,15 @@ function SettingsPage({ settings, onChange }: { settings: Settings; onChange: (s
   );
 }
 
-function Panel({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Panel({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-card/60 backdrop-blur border border-border clip-corner">
       <div className="px-5 py-3 border-b border-border flex items-center gap-2 text-primary">
@@ -876,10 +1089,21 @@ function Panel({ icon, title, children }: { icon: React.ReactNode; title: string
 }
 
 function SliderRow({
-  label, value, min, max, step, display, onChange,
+  label,
+  value,
+  min,
+  max,
+  step,
+  display,
+  onChange,
 }: {
-  label: string; value: number; min: number; max: number; step: number;
-  display: string; onChange: (v: number) => void;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  display: string;
+  onChange: (v: number) => void;
 }) {
   return (
     <div>
@@ -889,7 +1113,10 @@ function SliderRow({
       </div>
       <input
         type="range"
-        min={min} max={max} step={step} value={value}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full accent-[color:var(--neon)]"
       />
@@ -898,10 +1125,20 @@ function SliderRow({
 }
 
 /* ---------- shared bits ---------- */
-function PageHeader({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle: string }) {
+function PageHeader({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div className="mb-8">
-      <div className="text-[10px] uppercase tracking-[0.4em] text-[var(--neon)] mb-1">{eyebrow}</div>
+      <div className="text-[10px] uppercase tracking-[0.4em] text-[var(--neon)] mb-1">
+        {eyebrow}
+      </div>
       <h1 className="text-4xl md:text-5xl font-black tracking-tight">{title.toUpperCase()}</h1>
       <p className="text-muted-foreground mt-2">{subtitle}</p>
     </div>
@@ -912,7 +1149,9 @@ function SectionTitle({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="flex items-baseline justify-between mb-3">
       <h2 className="text-lg font-black uppercase tracking-widest">{title}</h2>
-      {hint && <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{hint}</span>}
+      {hint && (
+        <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{hint}</span>
+      )}
     </div>
   );
 }
@@ -928,11 +1167,21 @@ function KeyRow({ k, label }: { k: string; label: string }) {
   );
 }
 
-function StatCard({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) {
+function StatCard({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: number | string;
+  highlight?: boolean;
+}) {
   return (
     <div className="bg-card/60 backdrop-blur border border-border p-5 clip-corner">
       <div className="text-[10px] text-muted-foreground uppercase tracking-[0.3em]">{label}</div>
-      <div className={`text-3xl font-black ${highlight ? "text-[var(--neon)] text-glow-neon" : "text-primary"}`}>
+      <div
+        className={`text-3xl font-black ${highlight ? "text-[var(--neon)] text-glow-neon" : "text-primary"}`}
+      >
         {value}
       </div>
     </div>
@@ -940,16 +1189,30 @@ function StatCard({ label, value, highlight }: { label: string; value: number | 
 }
 
 function ModeCard({
-  tag, title, subtitle, details, icon, variant, onClick, locked, lockHint,
+  tag,
+  title,
+  subtitle,
+  details,
+  icon,
+  variant,
+  onClick,
+  locked,
+  lockHint,
 }: {
-  tag: string; title: string; subtitle: string; details: string;
-  icon: React.ReactNode; variant: "primary" | "accent" | "pink";
-  onClick: () => void; locked?: boolean; lockHint?: string;
+  tag: string;
+  title: string;
+  subtitle: string;
+  details: string;
+  icon: React.ReactNode;
+  variant: "primary" | "accent" | "pink";
+  onClick: () => void;
+  locked?: boolean;
+  lockHint?: string;
 }) {
   const colorMap = {
     primary: "border-primary/40 hover:border-primary text-primary",
-    accent:  "border-[var(--neon)]/40 hover:border-[var(--neon)] text-[var(--neon)]",
-    pink:    "border-[var(--neon-pink)]/40 hover:border-[var(--neon-pink)] text-[var(--neon-pink)]",
+    accent: "border-[var(--neon)]/40 hover:border-[var(--neon)] text-[var(--neon)]",
+    pink: "border-[var(--neon-pink)]/40 hover:border-[var(--neon-pink)] text-[var(--neon-pink)]",
   };
   return (
     <button

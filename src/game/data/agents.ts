@@ -1,8 +1,45 @@
 export type AgentRole = "Duelist" | "Controller" | "Sentinel" | "Initiator";
 
+export const ROLE_DETAILS: Record<
+  AgentRole,
+  { label: string; combatStyle: string; specialty: string; color: string }
+> = {
+  Duelist: {
+    label: "Дуэлянт",
+    combatStyle: "Врывается первым, забирает пространство и быстро наказывает цели.",
+    specialty: "Урон, вспышки, рывки, взрывной ультимейт",
+    color: "#ff5a2e",
+  },
+  Controller: {
+    label: "Контроллер",
+    combatStyle: "Режет обзор, закрывает углы и заставляет врагов двигаться не туда.",
+    specialty: "Смоки, завесы, зоны контроля, замедление",
+    color: "#8a6bff",
+  },
+  Sentinel: {
+    label: "Страж",
+    combatStyle: "Держит фланги, ставит ловушки и спасает команду в тяжелые моменты.",
+    specialty: "Ловушки, щиты, лечение, укрепление позиции",
+    color: "#7df0a5",
+  },
+  Initiator: {
+    label: "Инициатор",
+    combatStyle: "Открывает атаку разведкой, ослеплением и давлением по зоне.",
+    specialty: "Скан, флэш, подавление, массовая разведка",
+    color: "#ffd84a",
+  },
+};
+
 export type AgentSilhouette =
-  | "soldier" | "heavy" | "stealth" | "scout" | "mage"
-  | "support" | "sniper" | "ninja" | "speedster";
+  | "soldier"
+  | "heavy"
+  | "stealth"
+  | "scout"
+  | "mage"
+  | "support"
+  | "sniper"
+  | "ninja"
+  | "speedster";
 
 export type AgentVoiceLines = {
   /** Said when player picks the agent in agent-select screen */
@@ -32,7 +69,7 @@ export type Agent = {
   name: string;
   role: AgentRole;
   tagline: string;
-  abilities: { q: string; e: string; ult: string };
+  abilities: { c: string; q: string; e: string; ult: string };
   /** Primary accent color (hex) */
   hue: string;
   /** Decorative tailwind gradient ramp */
@@ -65,9 +102,18 @@ const VOICES = {
 
 export const AGENTS: Agent[] = [
   {
-    id: "blaze", name: "Blaze", role: "Duelist", tagline: "Сжигай. Прорывайся. Доминируй.",
-    abilities: { q: "Огненная стена", e: "Зажигательная граната", ult: "Inferno Strike" },
-    hue: "#ff5a2e", gradient: "from-orange-500/40 via-red-600/20 to-transparent",
+    id: "blaze",
+    name: "Blaze",
+    role: "Duelist",
+    tagline: "Сжигай. Прорывайся. Доминируй.",
+    abilities: {
+      c: "Pyro Cluster",
+      q: "Blind Heat",
+      e: "Flame Dash",
+      ult: "Inferno Strike",
+    },
+    hue: "#ff5a2e",
+    gradient: "from-orange-500/40 via-red-600/20 to-transparent",
     model: { body: 0x3a1a0e, head: 0xd9a87a, visor: 0xff5a2e, armor: 0x6b2410 },
     silhouette: "soldier",
     voiceId: VOICES.Brian,
@@ -86,9 +132,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "volt", name: "Volt", role: "Duelist", tagline: "Молния не стучит — она бьёт.",
-    abilities: { q: "Электрошок", e: "Рывок", ult: "Thunder Storm" },
-    hue: "#7df9ff", gradient: "from-cyan-400/40 via-blue-500/20 to-transparent",
+    id: "volt",
+    name: "Volt",
+    role: "Duelist",
+    tagline: "Молния не стучит — она бьёт.",
+    abilities: {
+      c: "Spark Charge",
+      q: "Arc Flash",
+      e: "Overdrive Dash",
+      ult: "Thunder Storm",
+    },
+    hue: "#7df9ff",
+    gradient: "from-cyan-400/40 via-blue-500/20 to-transparent",
     model: { body: 0x0a3a4a, head: 0xbcd6e0, visor: 0x7df9ff, armor: 0x103848 },
     silhouette: "speedster",
     voiceId: VOICES.Liam,
@@ -107,9 +162,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "frost", name: "Frost", role: "Controller", tagline: "Лёд медленнее, чем ты думаешь.",
-    abilities: { q: "Ледяная стена", e: "Поле замедления", ult: "Freeze Zone" },
-    hue: "#9ad8ff", gradient: "from-sky-300/40 via-cyan-500/20 to-transparent",
+    id: "frost",
+    name: "Frost",
+    role: "Controller",
+    tagline: "Лёд медленнее, чем ты думаешь.",
+    abilities: {
+      c: "Cryo Shard",
+      q: "Ice Smoke",
+      e: "Slow Field",
+      ult: "Permafrost Zone",
+    },
+    hue: "#9ad8ff",
+    gradient: "from-sky-300/40 via-cyan-500/20 to-transparent",
     model: { body: 0x1a3a55, head: 0xe6f0fa, visor: 0x9ad8ff, armor: 0x223a55 },
     silhouette: "mage",
     voiceId: VOICES.Charlie,
@@ -128,9 +192,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "shadow", name: "Shadow", role: "Controller", tagline: "Тебя нет. Был — есть нет.",
-    abilities: { q: "Телепорт", e: "Дымовая сфера", ult: "Vanish" },
-    hue: "#8a6bff", gradient: "from-violet-500/40 via-purple-700/20 to-transparent",
+    id: "shadow",
+    name: "Shadow",
+    role: "Controller",
+    tagline: "Тебя нет. Был — есть нет.",
+    abilities: {
+      c: "Shadow Pulse",
+      q: "Dark Smoke",
+      e: "Phase Orb",
+      ult: "Vanish Protocol",
+    },
+    hue: "#8a6bff",
+    gradient: "from-violet-500/40 via-purple-700/20 to-transparent",
     model: { body: 0x1a0e2c, head: 0x9c8aae, visor: 0x8a6bff, armor: 0x2a1a44 },
     silhouette: "stealth",
     voiceId: VOICES.Daniel,
@@ -149,9 +222,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "pulse", name: "Pulse", role: "Initiator", tagline: "Сначала вижу — потом стреляю.",
-    abilities: { q: "Сканер врагов", e: "Соник граната", ult: "Recon Wave" },
-    hue: "#5cffb0", gradient: "from-emerald-400/40 via-green-500/20 to-transparent",
+    id: "pulse",
+    name: "Pulse",
+    role: "Initiator",
+    tagline: "Сначала вижу — потом стреляю.",
+    abilities: {
+      c: "Jammer Beacon",
+      q: "Pulse Scanner",
+      e: "Sonic Grenade",
+      ult: "Recon Wave",
+    },
+    hue: "#5cffb0",
+    gradient: "from-emerald-400/40 via-green-500/20 to-transparent",
     model: { body: 0x0e2a1d, head: 0xc8e6cf, visor: 0x5cffb0, armor: 0x144028 },
     silhouette: "scout",
     voiceId: VOICES.Will,
@@ -170,9 +252,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "nova", name: "Nova", role: "Initiator", tagline: "Свет — это оружие.",
-    abilities: { q: "Флэш граната", e: "Энергетический луч", ult: "Orbital Laser" },
-    hue: "#ffd84a", gradient: "from-yellow-400/40 via-amber-500/20 to-transparent",
+    id: "nova",
+    name: "Nova",
+    role: "Initiator",
+    tagline: "Свет — это оружие.",
+    abilities: {
+      c: "Light Burst",
+      q: "Flash Star",
+      e: "Beam Strike",
+      ult: "Orbital Laser",
+    },
+    hue: "#ffd84a",
+    gradient: "from-yellow-400/40 via-amber-500/20 to-transparent",
     model: { body: 0x3a2e08, head: 0xe6d4a8, visor: 0xffd84a, armor: 0x4a3a10 },
     silhouette: "sniper",
     voiceId: VOICES.George,
@@ -191,9 +282,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "titan", name: "Titan", role: "Sentinel", tagline: "Стой за мной. Я стена.",
-    abilities: { q: "Щитовая стена", e: "Бафф брони", ult: "Invincible" },
-    hue: "#ff8a3d", gradient: "from-orange-400/40 via-yellow-700/20 to-transparent",
+    id: "titan",
+    name: "Titan",
+    role: "Sentinel",
+    tagline: "Стой за мной. Я стена.",
+    abilities: {
+      c: "Impact Beacon",
+      q: "Shield Wall",
+      e: "Armor Circuit",
+      ult: "Unbreakable",
+    },
+    hue: "#ff8a3d",
+    gradient: "from-orange-400/40 via-yellow-700/20 to-transparent",
     model: { body: 0x2a1a0a, head: 0xc8a888, visor: 0xff8a3d, armor: 0x553a1a },
     silhouette: "heavy",
     voiceId: VOICES.Callum,
@@ -212,9 +312,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "ghost", name: "Ghost", role: "Sentinel", tagline: "Тихо. Слишком тихо.",
-    abilities: { q: "Тихие шаги", e: "Клон-приманка", ult: "Shadow Army" },
-    hue: "#b8b8c8", gradient: "from-slate-400/40 via-zinc-600/20 to-transparent",
+    id: "ghost",
+    name: "Ghost",
+    role: "Sentinel",
+    tagline: "Тихо. Слишком тихо.",
+    abilities: {
+      c: "Phantom Trap",
+      q: "Silence Field",
+      e: "Shadow Step",
+      ult: "Shadow Army",
+    },
+    hue: "#b8b8c8",
+    gradient: "from-slate-400/40 via-zinc-600/20 to-transparent",
     model: { body: 0x1a1a22, head: 0xa8a8b4, visor: 0xb8b8c8, armor: 0x2a2a36 },
     silhouette: "ninja",
     voiceId: VOICES.Eric,
@@ -233,9 +342,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "echo", name: "Echo", role: "Sentinel", tagline: "Лечу, ускоряю, поднимаю.",
-    abilities: { q: "Поле лечения", e: "Ускорение", ult: "Revive" },
-    hue: "#7df0a5", gradient: "from-emerald-300/40 via-teal-500/20 to-transparent",
+    id: "echo",
+    name: "Echo",
+    role: "Sentinel",
+    tagline: "Лечу, ускоряю, поднимаю.",
+    abilities: {
+      c: "Nano Trap",
+      q: "Heal Field",
+      e: "Combat Stim",
+      ult: "Revive Protocol",
+    },
+    hue: "#7df0a5",
+    gradient: "from-emerald-300/40 via-teal-500/20 to-transparent",
     model: { body: 0x103a26, head: 0xd0eed8, visor: 0x7df0a5, armor: 0x1a4a32 },
     silhouette: "support",
     voiceId: VOICES.River,
@@ -254,9 +372,18 @@ export const AGENTS: Agent[] = [
     },
   },
   {
-    id: "phoenix", name: "Phoenix", role: "Duelist", tagline: "Смерть — это пауза.",
-    abilities: { q: "Огненный шар", e: "Рывок сквозь пламя", ult: "Rebirth" },
-    hue: "#ff4d6d", gradient: "from-rose-500/40 via-pink-600/20 to-transparent",
+    id: "phoenix",
+    name: "Phoenix",
+    role: "Duelist",
+    tagline: "Смерть — это пауза.",
+    abilities: {
+      c: "Ash Burst",
+      q: "Fire Orb",
+      e: "Phoenix Dash",
+      ult: "Rebirth",
+    },
+    hue: "#ff4d6d",
+    gradient: "from-rose-500/40 via-pink-600/20 to-transparent",
     model: { body: 0x3a0e1a, head: 0xe6a4ae, visor: 0xff4d6d, armor: 0x550e20 },
     silhouette: "ninja",
     voiceId: VOICES.Sarah,

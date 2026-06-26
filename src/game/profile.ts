@@ -16,12 +16,28 @@ export type Profile = {
   rank: string;
 };
 
-const RANKS = ["Iron 1", "Bronze 1", "Silver 1", "Gold 1", "Platinum 1", "Diamond 1", "Ascendant 1", "Immortal 1", "Radiant"];
+const RANKS = [
+  "Iron 1",
+  "Bronze 1",
+  "Silver 1",
+  "Gold 1",
+  "Platinum 1",
+  "Diamond 1",
+  "Ascendant 1",
+  "Immortal 1",
+  "Radiant",
+];
 
 const DEFAULT: Profile = {
   username: "Operator",
   avatar_color: "#22ddee",
-  level: 1, xp: 0, matches: 0, wins: 0, kills: 0, deaths: 0, rank: "Unranked",
+  level: 1,
+  xp: 0,
+  matches: 0,
+  wins: 0,
+  kills: 0,
+  deaths: 0,
+  rank: "Unranked",
 };
 
 export function loadProfile(): Profile {
@@ -30,11 +46,17 @@ export function loadProfile(): Profile {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT };
     return { ...DEFAULT, ...JSON.parse(raw) };
-  } catch { return { ...DEFAULT }; }
+  } catch {
+    return { ...DEFAULT };
+  }
 }
 
 export function saveProfile(p: Profile) {
-  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch {}
+  try {
+    localStorage.setItem(KEY, JSON.stringify(p));
+  } catch {
+    // Ignore storage failures, such as private mode or disabled localStorage.
+  }
 }
 
 export async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -68,20 +90,26 @@ export function xpForLevel(lvl: number) {
   return 100 + lvl * 50;
 }
 
-export function addMatchResult(p: Profile, opts: { won: boolean; kills: number; deaths?: number; mode: "quick" | "unranked" | "ranked" }): Profile {
+export function addMatchResult(
+  p: Profile,
+  opts: { won: boolean; kills: number; deaths?: number; mode: "quick" | "unranked" | "ranked" },
+): Profile {
   const next = { ...p };
   next.matches++;
   next.kills += opts.kills;
   next.deaths += opts.deaths ?? 0;
   if (opts.won) next.wins++;
-  const gain = (opts.won ? 200 : 100) + opts.kills * 15 + (opts.mode === "ranked" ? 100 : opts.mode === "unranked" ? 50 : 0);
+  const gain =
+    (opts.won ? 200 : 100) +
+    opts.kills * 15 +
+    (opts.mode === "ranked" ? 100 : opts.mode === "unranked" ? 50 : 0);
   next.xp += gain;
   while (next.xp >= xpForLevel(next.level)) {
     next.xp -= xpForLevel(next.level);
     next.level++;
   }
   if (opts.mode === "ranked") {
-    const idx = Math.min(RANKS.length - 1, Math.floor((next.wins) / 3));
+    const idx = Math.min(RANKS.length - 1, Math.floor(next.wins / 3));
     next.rank = RANKS[idx];
   }
   saveProfile(next);

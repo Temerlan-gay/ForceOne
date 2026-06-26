@@ -21,9 +21,14 @@ export class Multiplayer {
   onChange?: () => void;
   private lastSent = 0;
 
-  constructor(private room: string, private name: string) {}
+  constructor(
+    private room: string,
+    private name: string,
+  ) {}
 
-  get selfId() { return this.id; }
+  get selfId() {
+    return this.id;
+  }
 
   start() {
     const ch = supabase.channel(`force-one:${this.room}`, {
@@ -58,7 +63,10 @@ export class Multiplayer {
     // prune stale remotes (5s without update)
     let pruned = false;
     for (const [id, p] of this.remotes) {
-      if (now - p.t > 5000) { this.remotes.delete(id); pruned = true; }
+      if (now - p.t > 5000) {
+        this.remotes.delete(id);
+        pruned = true;
+      }
     }
     if (pruned) this.onChange?.();
   }

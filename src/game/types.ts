@@ -20,8 +20,14 @@ export type GameConfig = {
   agent?: Agent;
 };
 
-export type AbilityKey = "q" | "e" | "x";
-export type Ability = { name: string; charges: number; max: number; cd: number; cooldown: number };
+export type AbilityKey = "c" | "q" | "e" | "x";
+export type Ability = {
+  name: string;
+  charges: number;
+  max: number;
+  cd: number;
+  cooldown: number;
+};
 
 export type Bot = {
   mesh: THREE.Group;
@@ -65,17 +71,57 @@ export type RunState = {
 };
 
 export function makeRun(cfg: GameConfig): RunState {
+  const agent = cfg.agent;
+  const controllerSmoke = agent?.role === "Controller";
+  const fastDuelist = agent?.id === "volt" || agent?.id === "phoenix";
+
   return {
     mode: cfg.mode,
     killsToWin: cfg.killsToWin,
-    hp: 100, armor: 50, mag: 25, ammo: 90, reloading: 0,
-    fireCd: 0, spread: 0, kills: 0, deaths: 0, flashed: 0,
+    hp: 100,
+    armor: 50,
+    mag: 25,
+    ammo: 90,
+    reloading: 0,
+    fireCd: 0,
+    spread: 0,
+    kills: 0,
+    deaths: 0,
+    flashed: 0,
     abilities: {
-      q: { name: "Flash", charges: 2, max: 2, cd: 0, cooldown: 9 },
-      e: { name: "Dash", charges: 1, max: 1, cd: 0, cooldown: 7 },
-      x: { name: "Smoke", charges: 2, max: 2, cd: 0, cooldown: 12 },
+      c: {
+        name: agent?.abilities.c ?? "Frag",
+        charges: agent?.role === "Duelist" ? 2 : 1,
+        max: agent?.role === "Duelist" ? 2 : 1,
+        cd: 0,
+        cooldown: agent?.role === "Duelist" ? 10 : 16,
+      },
+      q: {
+        name: agent?.abilities.q ?? "Flash",
+        charges: agent?.role === "Initiator" ? 2 : 1,
+        max: agent?.role === "Initiator" ? 2 : 1,
+        cd: 0,
+        cooldown: agent?.role === "Initiator" ? 9 : 12,
+      },
+      e: {
+        name: agent?.abilities.e ?? "Dash",
+        charges: fastDuelist ? 2 : 1,
+        max: fastDuelist ? 2 : 1,
+        cd: 0,
+        cooldown: fastDuelist ? 6 : 11,
+      },
+      x: {
+        name: agent?.abilities.ult ?? "Smoke",
+        charges: 1,
+        max: 1,
+        cd: 0,
+        cooldown: controllerSmoke ? 18 : 22,
+      },
     },
-    finished: false, won: false, message: "", msgTimer: 0,
+    finished: false,
+    won: false,
+    message: "",
+    msgTimer: 0,
     onlinePlayers: 0,
   };
 }
