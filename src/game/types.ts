@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Agent } from "@/game/data/agents";
+import type { SiteKey } from "@/game/data/maps";
 
 export type MatchMode = "quick" | "unranked" | "ranked";
 
@@ -49,6 +50,17 @@ export type Tracer = {
 
 export type SmokeOrb = { mesh: THREE.Mesh; life: number; pos: THREE.Vector3; r: number };
 
+export type ObjectiveState = {
+  carryingPack: boolean;
+  canPlant: boolean;
+  site: SiteKey | null;
+  phase: "carried" | "planting" | "planted" | "detonated";
+  plantProgress: number;
+  plantDuration: number;
+  timeLeft: number;
+  detonateAfter: number;
+};
+
 export type RunState = {
   mode: MatchMode;
   killsToWin: number;
@@ -68,6 +80,7 @@ export type RunState = {
   message: string;
   msgTimer: number;
   onlinePlayers: number;
+  objective: ObjectiveState;
 };
 
 export function makeRun(cfg: GameConfig): RunState {
@@ -123,5 +136,15 @@ export function makeRun(cfg: GameConfig): RunState {
     message: "",
     msgTimer: 0,
     onlinePlayers: 0,
+    objective: {
+      carryingPack: true,
+      canPlant: false,
+      site: null,
+      phase: "carried",
+      plantProgress: 0,
+      plantDuration: 3,
+      timeLeft: 40,
+      detonateAfter: 40,
+    },
   };
 }

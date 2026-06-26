@@ -5,6 +5,7 @@ import type { Settings } from "./settings";
 import { Multiplayer } from "./multiplayer";
 import { buildAgentModel } from "./agent-model";
 import { AGENTS } from "./data/agents";
+import { MAPS, type MapLayout } from "./data/maps";
 
 // Map physical key codes -> logical action so the game works regardless of
 // keyboard layout (русская/английская и т.п.)
@@ -14,6 +15,7 @@ const CODE_MAP: Record<string, string> = {
   KeyS: "s",
   KeyD: "d",
   KeyR: "r",
+  KeyF: "f",
   KeyC: "c",
   KeyQ: "q",
   KeyE: "e",
@@ -49,6 +51,7 @@ export class FPSEngine {
   private bots: Bot[] = [];
   private tracers: Tracer[] = [];
   private smokes: SmokeOrb[] = [];
+  private plantedPack: THREE.Group | null = null;
   private flashMeshes: { mesh: THREE.Mesh; life: number }[] = [];
   private smokePlanner: {
     key: AbilityKey;
@@ -131,6 +134,9 @@ export class FPSEngine {
     this.settings = settings;
     this.cb = cb;
     this.run = makeRun(cfg);
+    const spawn = this.getMapLayout().attackerSpawn;
+    this.playerPos.set(spawn.x, this.playerHeight, spawn.z);
+    this.yaw = Math.PI;
     if (getComputedStyle(container).position === "static") container.style.position = "relative";
 
     const pixelRatio =
@@ -193,6 +199,10 @@ export class FPSEngine {
     this.settings = s;
     this.camera.fov = s.fov;
     this.camera.updateProjectionMatrix();
+  }
+
+  private getMapLayout(): MapLayout {
+    return MAPS.find((m) => m.id === this.cfg.mapId)?.layout ?? MAPS[0].layout;
   }
 
   /** Compute palette from map theme + time of day. */
@@ -659,6 +669,8 @@ export class FPSEngine {
       this.walls.push(new THREE.Box3().setFromObject(mesh));
     }
 
+    this.addObjectiveMarkers();
+
     // ===== Theme decoration (no collision) =====
     if (theme === "desert") {
       // scattered rocks
@@ -997,19 +1009,122 @@ export class FPSEngine {
   }
 
   private spawnBots(n: number) {
-    const spawns = [
-      new THREE.Vector3(28, 0, 28),
-      new THREE.Vector3(-28, 0, 28),
-      new THREE.Vector3(28, 0, -28),
-      new THREE.Vector3(-28, 0, -28),
-      new THREE.Vector3(0, 0, 32),
-      new THREE.Vector3(32, 0, 0),
-      new THREE.Vector3(-32, 0, 0),
-    ];
+    const spawns = this.getDefenderSpawns();
     for (let i = 0; i < n; i++) {
       const s = spawns[i % spawns.length];
       this.bots.push(this.createBot(s.x, s.z));
     }
+  }
+
+  private getDefenderSpawns() {
+    const { defenderSpawn } = this.getMapLayout();
+    return [
+      new THREE.Vector3(defenderSpawn.x, 0, defenderSpawn.z),
+      new THREE.Vector3(defenderSpawn.x - 7, 0, defenderSpawn.z + 4),
+      new THREE.Vector3(defenderSpawn.x + 7, 0, defenderSpawn.z + 4),
+      new THREE.Vector3(defenderSpawn.x - 12, 0, defenderSpawn.z + 9),
+      new THREE.Vector3(defenderSpawn.x + 12, 0, defenderSpawn.z + 9),
+    ];
+  }
+
+  private addObjectiveMarkers() {
+    const layout = this.getMapLayout();
+    const siteColors: Record<string, number> = { A: 0x5cffb0, B: 0xffd166, C: 0xff4d6d };
+    for (const site of layout.sites) {
+      const color = siteColors[site.key] ?? 0xffffff;
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(site.radius - 0.2, site.radius, 72),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.78,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(site.x, 0.035, site.z);
+      this.scene.add(ring);
+
+      const fill = new THREE.Mesh(
+        new THREE.CircleGeometry(site.radius - 0.35, 72),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.08,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+      );
+      fill.rotation.x = -Math.PI / 2;
+      fill.position.set(site.x, 0.032, site.z);
+      this.scene.add(fill);
+      this.addBillboardLabel(`PLANT ${site.key}`, site.x, 2.4, site.z, color);
+    }
+
+    if (layout.mid) {
+      const mid = new THREE.Mesh(
+        new THREE.RingGeometry(3.3, 3.55, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0x88c4ff,
+          transparent: true,
+          opacity: 0.5,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+      );
+      mid.rotation.x = -Math.PI / 2;
+      mid.position.set(layout.mid.x, 0.04, layout.mid.z);
+      this.scene.add(mid);
+      this.addBillboardLabel("MID", layout.mid.x, 2.2, layout.mid.z, 0x88c4ff);
+    }
+
+    this.addSpawnMarker("ATTACK", layout.attackerSpawn.x, layout.attackerSpawn.z, 0x5cffb0);
+    this.addSpawnMarker("DEFENSE", layout.defenderSpawn.x, layout.defenderSpawn.z, 0xff4d6d);
+  }
+
+  private addSpawnMarker(label: string, x: number, z: number, color: number) {
+    const marker = new THREE.Mesh(
+      new THREE.CircleGeometry(2.2, 32),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    marker.rotation.x = -Math.PI / 2;
+    marker.position.set(x, 0.045, z);
+    this.scene.add(marker);
+    this.addBillboardLabel(label, x, 2.0, z, color);
+  }
+
+  private addBillboardLabel(text: string, x: number, y: number, z: number, color: number) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(7,10,18,0.72)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = `#${color.toString(16).padStart(6, "0")}`;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 28px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }),
+    );
+    sprite.position.set(x, y, z);
+    sprite.scale.set(5.6, 1.4, 1);
+    this.scene.add(sprite);
   }
 
   private createBot(x: number, z: number): Bot {
@@ -1559,13 +1674,7 @@ export class FPSEngine {
         // respawn a new bot after a delay for endless action (until killsToWin)
         setTimeout(() => {
           if (this.disposed || this.run.finished) return;
-          const spawns = [
-            new THREE.Vector3(28, 0, 28),
-            new THREE.Vector3(-28, 0, 28),
-            new THREE.Vector3(0, 0, 32),
-            new THREE.Vector3(32, 0, -20),
-            new THREE.Vector3(-32, 0, 20),
-          ];
+          const spawns = this.getDefenderSpawns();
           const sp = spawns[Math.floor(Math.random() * spawns.length)];
           this.bots.push(this.createBot(sp.x, sp.z));
         }, 1500);
@@ -1590,7 +1699,8 @@ export class FPSEngine {
       this.run.armor = 50;
       this.run.mag = 25;
       this.run.ammo = 90;
-      this.playerPos.set(0, 1.7, 0);
+      const spawn = this.getMapLayout().attackerSpawn;
+      this.playerPos.set(spawn.x, this.playerHeight, spawn.z);
       this.run.message = `Respawn — смертей ${this.run.deaths}/5`;
       this.run.msgTimer = 2;
       this.cb.onRespawn?.();
@@ -1606,6 +1716,129 @@ export class FPSEngine {
     setTimeout(() => {
       this.cb.onEnd({ won, kills: this.run.kills });
     }, 2000);
+  }
+
+  private updateObjective(dt: number) {
+    const objective = this.run.objective;
+    if (this.paused || objective.phase === "detonated") {
+      objective.canPlant = false;
+      if (objective.phase === "planting") {
+        objective.phase = "carried";
+        objective.plantProgress = 0;
+      }
+      return;
+    }
+
+    if (objective.phase === "planted") {
+      objective.canPlant = false;
+      objective.timeLeft = Math.max(0, objective.timeLeft - dt);
+      if (this.plantedPack) this.plantedPack.rotation.y += dt * 2;
+      if (objective.timeLeft <= 0) {
+        objective.phase = "detonated";
+        this.run.message = "PACK DETONATED";
+        this.run.msgTimer = 4;
+        if (this.plantedPack) {
+          this.spawnFrag(this.plantedPack.position.clone().setY(1), 8, 120, "#ffd166");
+        }
+      }
+      return;
+    }
+
+    const site = this.getCurrentPlantSite();
+    objective.site = site?.key ?? null;
+    objective.canPlant = !!site && objective.carryingPack;
+
+    if (!site || !objective.carryingPack || !this.keys.has("f")) {
+      if (objective.phase === "planting") {
+        objective.phase = "carried";
+        objective.plantProgress = 0;
+      }
+      return;
+    }
+
+    objective.phase = "planting";
+    objective.plantProgress = Math.min(objective.plantDuration, objective.plantProgress + dt);
+    this.run.message = `Planting ${site.key}`;
+    this.run.msgTimer = 0.25;
+
+    if (objective.plantProgress >= objective.plantDuration) {
+      this.completePlant(site);
+    }
+  }
+
+  private getCurrentPlantSite() {
+    return this.getMapLayout().sites.find((site) => {
+      const dx = this.playerPos.x - site.x;
+      const dz = this.playerPos.z - site.z;
+      return Math.hypot(dx, dz) <= site.radius;
+    });
+  }
+
+  private completePlant(site: NonNullable<ReturnType<FPSEngine["getCurrentPlantSite"]>>) {
+    const objective = this.run.objective;
+    objective.carryingPack = false;
+    objective.canPlant = false;
+    objective.phase = "planted";
+    objective.site = site.key;
+    objective.plantProgress = objective.plantDuration;
+    objective.timeLeft = objective.detonateAfter;
+    this.run.message = `PACK PLANTED ON ${site.key}`;
+    this.run.msgTimer = 3;
+
+    this.clearPlantedPack();
+    this.plantedPack = this.createPackMesh(site.x, site.z);
+    this.scene.add(this.plantedPack);
+  }
+
+  private createPackMesh(x: number, z: number) {
+    const group = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 0.28, 0.75),
+      new THREE.MeshStandardMaterial({
+        color: 0x10151f,
+        roughness: 0.45,
+        metalness: 0.35,
+        emissive: 0x301200,
+        emissiveIntensity: 0.3,
+      }),
+    );
+    body.position.y = 0.18;
+    group.add(body);
+
+    const screen = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.04, 0.28),
+      new THREE.MeshBasicMaterial({ color: 0xffd166 }),
+    );
+    screen.position.set(0, 0.36, 0);
+    group.add(screen);
+
+    const antenna = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.9, 8),
+      new THREE.MeshBasicMaterial({ color: 0xff4d6d }),
+    );
+    antenna.position.set(0.45, 0.7, -0.25);
+    antenna.rotation.z = 0.35;
+    group.add(antenna);
+
+    const pulse = new THREE.PointLight(0xffd166, 1.5, 8);
+    pulse.position.set(0, 0.7, 0);
+    group.add(pulse);
+
+    group.position.set(x, 0.04, z);
+    return group;
+  }
+
+  private clearPlantedPack() {
+    if (!this.plantedPack) return;
+    this.scene.remove(this.plantedPack);
+    this.plantedPack.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      mesh.geometry?.dispose?.();
+      const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+      if (Array.isArray(material)) material.forEach((m) => m.dispose());
+      else material?.dispose?.();
+    });
+    this.plantedPack = null;
   }
 
   private update(dt: number) {
@@ -1647,6 +1880,7 @@ export class FPSEngine {
     }
     this.tryMove(mx * speed * dt, mz * speed * dt);
     this.camera.position.copy(this.playerPos);
+    this.updateObjective(dt);
 
     // reload + fire
     if (r.reloading > 0) {

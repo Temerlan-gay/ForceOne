@@ -2,151 +2,181 @@ import neonCityImg from "@/assets/map-neon-city.jpg";
 
 export type MapTheme = "desert" | "arctic" | "temple" | "urban" | "neon";
 export type TimeOfDay = "day" | "evening" | "night";
+export type SiteKey = "A" | "B" | "C";
 
 export type SiteInfo = {
-  /** "A" or "B" */
-  key: "A" | "B";
+  key: SiteKey;
   name: string;
   description: string;
+};
+
+export type MapPoint = {
+  x: number;
+  z: number;
+};
+
+export type MapSiteLayout = SiteInfo &
+  MapPoint & {
+    radius: number;
+  };
+
+export type MapLayout = {
+  attackerSpawn: MapPoint;
+  defenderSpawn: MapPoint;
+  mid?: MapPoint & { name: string };
+  sites: [MapSiteLayout, MapSiteLayout] | [MapSiteLayout, MapSiteLayout, MapSiteLayout];
 };
 
 export type GameMap = {
   id: string;
   name: string;
-  /** Short subtitle shown under the name */
   tagline: string;
-  /** 2-3 sentence lore for map reveal screen */
   lore: string;
-  /** Visual theme used by the 3D engine */
   theme: MapTheme;
-  /** Time of day used for ambient lighting / sky */
   timeOfDay: TimeOfDay;
-  /** When true, the engine cycles day → evening → night during the match */
   dynamicCycle?: boolean;
-  /** Bomb sites for competitive layout */
-  sites: [SiteInfo, SiteInfo];
-  /** Key environmental design notes */
+  sites: [SiteInfo, SiteInfo] | [SiteInfo, SiteInfo, SiteInfo];
+  layout: MapLayout;
   designNotes: string[];
-  /** CSS gradient string used as preview backdrop fallback */
   preview: string;
-  /** Optional preview screenshot */
   image?: string;
 };
+
+const twoSiteLayout = (
+  a: Omit<MapSiteLayout, "key">,
+  b: Omit<MapSiteLayout, "key">,
+  mid: MapPoint & { name: string },
+): MapLayout => ({
+  attackerSpawn: { x: 0, z: 34 },
+  defenderSpawn: { x: 0, z: -34 },
+  mid,
+  sites: [
+    { key: "A", ...a },
+    { key: "B", ...b },
+  ],
+});
+
+const threeSiteLayout = (
+  a: Omit<MapSiteLayout, "key">,
+  b: Omit<MapSiteLayout, "key">,
+  c: Omit<MapSiteLayout, "key">,
+): MapLayout => ({
+  attackerSpawn: { x: 0, z: 34 },
+  defenderSpawn: { x: 0, z: -34 },
+  sites: [
+    { key: "A", ...a },
+    { key: "B", ...b },
+    { key: "C", ...c },
+  ],
+});
 
 export const MAPS: GameMap[] = [
   {
     id: "dunefall",
     name: "Dunefall",
-    tagline: "Пустынная военная зона · день",
+    tagline: "Desert military zone · day",
     lore:
-      "После глобальных конфликтов корпорации построили скрытую базу в пустыне " +
-      "для разработки оружия нового поколения. После утечки данных база стала " +
-      "зоной боевых операций.",
+      "A buried weapons base split into long sand lanes, hard cover and a contested center route.",
     theme: "desert",
     timeOfDay: "day",
-    designNotes: ["песчаные бури", "разрушенные ангары", "подземные туннели"],
+    designNotes: ["sand lanes", "broken hangars", "underground routes"],
     sites: [
       {
         key: "A",
-        name: "Командный центр",
-        description: "Разрушенный CC, узкие проходы и много укрытий.",
+        name: "Plant A",
+        description: "Command center site with tight entrances and heavy cover.",
       },
       {
         key: "B",
-        name: "Контейнерный двор",
-        description: "Открытая зона с башнями и снайперскими позициями.",
+        name: "Plant B",
+        description: "Container yard with open angles and sniper sightlines.",
       },
     ],
+    layout: twoSiteLayout(
+      { name: "Plant A", description: "Command center", x: -24, z: -18, radius: 6 },
+      { name: "Plant B", description: "Container yard", x: 24, z: -18, radius: 6 },
+      { name: "Mid", x: 0, z: 0 },
+    ),
     preview: "linear-gradient(135deg, #d9a066 0%, #b07a3a 55%, #5a3a1c 100%)",
   },
   {
     id: "ironhaven",
     name: "Ironhaven",
-    tagline: "Индустриальный завод · вечер",
-    lore:
-      "Огромный автоматизированный завод по производству военных дронов вышел " +
-      "из-под контроля ИИ и стал ареной боевых операций между корпоративными " +
-      "наёмниками.",
+    tagline: "Industrial factory · evening",
+    lore: "A drone factory with metal catwalks, crate stacks and a noisy middle lane.",
     theme: "urban",
     timeOfDay: "evening",
-    designNotes: ["металл, трубы, пар", "движущиеся механизмы", "шумящие конвейеры"],
+    designNotes: ["metal", "pipes", "conveyors"],
     sites: [
-      { key: "A", name: "Фабрика", description: "Вертикальные уровни, мостики и галереи." },
-      { key: "B", name: "Склад", description: "Кран и контейнеры, открытые линии огня." },
+      { key: "A", name: "Plant A", description: "Factory floor with vertical cover." },
+      { key: "B", name: "Plant B", description: "Warehouse site with cranes and containers." },
     ],
+    layout: twoSiteLayout(
+      { name: "Plant A", description: "Factory floor", x: -25, z: -10, radius: 6 },
+      { name: "Plant B", description: "Warehouse", x: 25, z: 10, radius: 6 },
+      { name: "Mid", x: 0, z: 0 },
+    ),
     preview: "linear-gradient(135deg, #7a7d84 0%, #3a3e48 55%, #15181f 100%)",
   },
   {
     id: "neon_district",
     name: "Neon District",
-    tagline: "Киберпанк-город · ночь",
-    lore:
-      "Город будущего разделён между корпорациями, каждая контролирует " +
-      "цифровую инфраструктуру и наёмников. Улицы залиты дождём и неоном — " +
-      "идеальная сцена для тихой войны.",
+    tagline: "Cyberpunk city · night · 3 sites",
+    lore: "Rain, neon and rooftops create a fast three-site map with no dedicated mid lane.",
     theme: "neon",
     timeOfDay: "night",
-    designNotes: ["неоновые вывески", "дождь и отражения", "высокие здания"],
+    designNotes: ["neon signs", "rain reflections", "three plant sites"],
     sites: [
-      {
-        key: "A",
-        name: "Plaza",
-        description: "Торговый центр с голограммами, лестницы и закрытые залы.",
-      },
-      { key: "B", name: "Skyline", description: "Крыши небоскрёбов и длинные линии обзора." },
+      { key: "A", name: "Plant A", description: "Plaza site with holograms and stairs." },
+      { key: "B", name: "Plant B", description: "Skyline site with long rooftop angles." },
+      { key: "C", name: "Plant C", description: "Arcade site with short corners and glass cover." },
     ],
+    layout: threeSiteLayout(
+      { name: "Plant A", description: "Plaza", x: -25, z: -18, radius: 5.5 },
+      { name: "Plant B", description: "Skyline", x: 0, z: -24, radius: 5.5 },
+      { name: "Plant C", description: "Arcade", x: 25, z: -18, radius: 5.5 },
+    ),
     preview: "linear-gradient(135deg, #0a0e2c 0%, #1d2670 40%, #ff2cb4 100%)",
     image: neonCityImg,
   },
   {
     id: "frostline",
     name: "Frostline",
-    tagline: "Арктическая научная база · день",
-    lore:
-      "Исследовательская станция изучала энергетический кристалл, но после " +
-      "аварии база была эвакуирована, оставив технологии под контролем " +
-      "автоматических систем безопасности.",
+    tagline: "Arctic research base · day",
+    lore: "A frozen lab complex with low visibility outside and tight indoor plant zones.",
     theme: "arctic",
     timeOfDay: "day",
-    designNotes: ["снег, лёд, метели", "стеклянные лаборатории", "холодное освещение"],
+    designNotes: ["snow", "glass labs", "cold lighting"],
     sites: [
-      {
-        key: "A",
-        name: "Купол-лаборатория",
-        description: "Узкие коридоры внутри исследовательского купола.",
-      },
-      {
-        key: "B",
-        name: "Внешний периметр",
-        description: "Открытая зона со снежной бурей и плохой видимостью.",
-      },
+      { key: "A", name: "Plant A", description: "Lab dome with narrow corridors." },
+      { key: "B", name: "Plant B", description: "Outer perimeter with poor visibility." },
     ],
+    layout: twoSiteLayout(
+      { name: "Plant A", description: "Lab dome", x: -22, z: -22, radius: 6 },
+      { name: "Plant B", description: "Outer perimeter", x: 22, z: -22, radius: 6 },
+      { name: "Mid", x: 0, z: -2 },
+    ),
     preview: "linear-gradient(135deg, #cfe6f2 0%, #6f99b8 55%, #1f3a55 100%)",
   },
   {
     id: "temple_core",
     name: "Temple Core",
-    tagline: "Древние руины + технологии · день→ночь",
-    lore:
-      "Древний храм скрывал энергетическое ядро неизвестного происхождения. " +
-      "Современные корпорации начали раскопки и превратили святилище в " +
-      "боевую зону, где древнее встречается с футуризмом.",
+    tagline: "Ancient ruins + tech · day to night · 3 sites",
+    lore: "A three-site temple map where the old mid lane is replaced by Plant C.",
     theme: "temple",
     timeOfDay: "day",
     dynamicCycle: true,
-    designNotes: [
-      "каменные руины + голограммы",
-      "энергия в центре карты",
-      "смесь древнего и футуризма",
-    ],
+    designNotes: ["stone ruins", "energy core", "three plant sites"],
     sites: [
-      { key: "A", name: "Внутренний храм", description: "Узкие коридоры и арки внутри святилища." },
-      {
-        key: "B",
-        name: "Двор ядра",
-        description: "Открытый двор с энергетическим ядром в центре.",
-      },
+      { key: "A", name: "Plant A", description: "Inner shrine with arches and tight cover." },
+      { key: "B", name: "Plant B", description: "Open core yard with long rotations." },
+      { key: "C", name: "Plant C", description: "Lower relic room replacing the mid lane." },
     ],
+    layout: threeSiteLayout(
+      { name: "Plant A", description: "Inner shrine", x: -24, z: -16, radius: 5.5 },
+      { name: "Plant B", description: "Core yard", x: 24, z: -16, radius: 5.5 },
+      { name: "Plant C", description: "Relic room", x: 0, z: -2, radius: 5.5 },
+    ),
     preview: "linear-gradient(135deg, #4a6b3a 0%, #2f4a25 55%, #18271a 100%)",
   },
 ];
