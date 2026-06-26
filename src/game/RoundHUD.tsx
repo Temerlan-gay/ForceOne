@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import type { Agent } from "@/game/data/agents";
 import type { FPSEngine } from "@/game/fps-engine";
+import type { RunState } from "@/game/types";
 import type { RoundState, KillFeedEntry } from "@/game/round";
 import { ROUND_CONFIG } from "@/game/round";
-import { Crosshair, Skull, Timer, Trophy, ShoppingCart } from "lucide-react";
+import { Bomb, Crosshair, Skull, Timer, Trophy, ShoppingCart } from "lucide-react";
 
 function fmt(sec: number) {
   const s = Math.max(0, Math.ceil(sec));
@@ -77,18 +78,43 @@ function ScoreChip({
   );
 }
 
-/** Round-target progress (kills needed this round). */
-export function RoundObjective({ round, agent }: { round: RoundState; agent: Agent }) {
+/** Round-target progress and pack status. */
+export function RoundObjective({
+  round,
+  agent,
+  state,
+}: {
+  round: RoundState;
+  agent: Agent;
+  state?: RunState | null;
+}) {
   if (round.phase !== "live") return null;
   const need = ROUND_CONFIG.killTarget;
+  const objective = state?.objective;
+  const packText =
+    objective?.phase === "planted"
+      ? `PACK ${objective.site} - ${Math.ceil(objective.timeLeft)}s`
+      : objective?.phase === "planting"
+        ? `PLANTING ${objective.site} - ${Math.round((objective.plantProgress / objective.plantDuration) * 100)}%`
+        : objective?.canPlant
+          ? `HOLD F - PLANT ${objective.site}`
+          : "PACK CARRIED";
+
   return (
-    <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 flex items-center gap-1.5 bg-card/70 backdrop-blur px-3 py-1.5 border border-border text-[10px] uppercase tracking-widest animate-fade-in">
-      <Crosshair className="w-3 h-3" style={{ color: agent.hue }} />
-      <span className="text-muted-foreground">Цель раунда:</span>
-      <span className="font-bold" style={{ color: agent.hue }}>
-        {round.roundKills}/{need}
-      </span>
-      <span className="text-muted-foreground">киллов</span>
+    <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 flex flex-col items-center gap-1.5 animate-fade-in">
+      <div className="flex items-center gap-1.5 bg-card/70 backdrop-blur px-3 py-1.5 border border-border text-[10px] uppercase tracking-widest">
+        <Bomb className="w-3 h-3" style={{ color: agent.hue }} />
+        <span className="font-bold" style={{ color: agent.hue }}>
+          {packText}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 bg-card/70 backdrop-blur px-3 py-1.5 border border-border text-[10px] uppercase tracking-widest">
+        <Crosshair className="w-3 h-3" style={{ color: agent.hue }} />
+        <span className="text-muted-foreground">Kills:</span>
+        <span className="font-bold" style={{ color: agent.hue }}>
+          {round.roundKills}/{need}
+        </span>
+      </div>
     </div>
   );
 }
@@ -129,6 +155,7 @@ export function Minimap({ engine, agent }: { engine: FPSEngine; agent: Agent }) 
   const size = 168;
   const player = engine.getPlayerSnapshot();
   const bots = engine.getBotSnapshots();
+  const layout = engine.getObjectiveLayout();
   const scale = size / (half * 2);
   const toPx = (v: number) => size / 2 + v * scale;
 
@@ -142,6 +169,29 @@ export function Minimap({ engine, agent }: { engine: FPSEngine; agent: Agent }) 
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-foreground" />
         <div className="absolute top-1/2 left-0 right-0 h-px bg-foreground" />
       </div>
+      {layout.mid && (
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 text-[8px] font-black text-sky-200 border border-sky-200/50 bg-sky-400/15 px-1"
+          style={{ left: toPx(layout.mid.x), top: toPx(layout.mid.z) }}
+        >
+          MID
+        </div>
+      )}
+      {layout.sites.map((site) => (
+        <div
+          key={site.key}
+          className="absolute -translate-x-1/2 -translate-y-1/2 grid place-items-center w-5 h-5 rounded-full border text-[10px] font-black bg-background/70"
+          style={{
+            left: toPx(site.x),
+            top: toPx(site.z),
+            color: site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
+            borderColor:
+              site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
+          }}
+        >
+          {site.key}
+        </div>
+      ))}
       {/* bots */}
       {bots.map((b, i) => (
         <div

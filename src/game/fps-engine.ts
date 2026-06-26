@@ -2062,7 +2062,7 @@ export class FPSEngine {
       r.onlinePlayers = this.mp.remotes.size + 1;
     }
 
-    this.cb.onState({ ...r, abilities: { ...r.abilities } });
+    this.cb.onState({ ...r, abilities: { ...r.abilities }, objective: { ...r.objective } });
   }
 
   private createRemoteAvatar(_name: string): THREE.Group {
@@ -2090,6 +2090,9 @@ export class FPSEngine {
   getMapHalfSize() {
     return 40;
   }
+  getObjectiveLayout() {
+    return this.getMapLayout();
+  }
   getPlayerSnapshot() {
     return { x: this.playerPos.x, z: this.playerPos.z, yaw: this.yaw };
   }
@@ -2111,16 +2114,36 @@ export class FPSEngine {
     r.deaths = 0;
     r.message = "";
     r.msgTimer = 0;
-    // respawn any dead bots so the next round has opponents
-    for (const b of this.bots) {
-      if (!b.alive) {
-        b.alive = true;
-        b.hp = 100;
-        b.armor = 30;
-        b.pos.set((Math.random() - 0.5) * 60, 1.7, (Math.random() - 0.5) * 60);
-        b.mesh.position.copy(b.pos);
-        b.mesh.visible = true;
-      }
+    r.objective = {
+      carryingPack: true,
+      canPlant: false,
+      site: null,
+      phase: "carried",
+      plantProgress: 0,
+      plantDuration: 3,
+      timeLeft: 40,
+      detonateAfter: 40,
+    };
+    this.clearPlantedPack();
+
+    const layout = this.getMapLayout();
+    this.playerPos.set(layout.attackerSpawn.x, this.playerHeight, layout.attackerSpawn.z);
+    this.playerVel.set(0, 0, 0);
+    this.yaw = Math.PI;
+
+    const spawns = this.getDefenderSpawns();
+    for (let i = 0; i < this.bots.length; i++) {
+      const b = this.bots[i];
+      const sp = spawns[i % spawns.length];
+      b.alive = true;
+      b.hp = 100;
+      b.armor = 30;
+      b.vel.set(0, 0, 0);
+      b.pos.set(sp.x, 0, sp.z);
+      b.target.copy(b.pos);
+      b.mesh.position.copy(b.pos);
+      b.mesh.visible = true;
+      if (!b.mesh.parent) this.scene.add(b.mesh);
     }
   }
 
@@ -2129,6 +2152,7 @@ export class FPSEngine {
     cancelAnimationFrame(this.raf);
     this.mp?.stop();
     this.mp = null;
+    this.clearPlantedPack();
     this.closeSmokePlanner(false);
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);

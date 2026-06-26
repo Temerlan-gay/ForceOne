@@ -127,9 +127,11 @@ export function FPSGame({
         if (liveKills !== r.roundKills || liveDeaths !== r.roundDeaths) {
           setRound({ ...r, roundKills: liveKills, roundDeaths: liveDeaths });
         }
-        // win/lose conditions
-        const won = liveKills >= ROUND_CONFIG.killTarget;
-        const timedOut = now >= r.phaseEndAt;
+        // win/lose conditions: kills can win, but planted pack owns the timer.
+        const packDetonated = state?.objective.phase === "detonated";
+        const packPlanted = state?.objective.phase === "planted";
+        const won = liveKills >= ROUND_CONFIG.killTarget || packDetonated;
+        const timedOut = now >= r.phaseEndAt && !packPlanted;
         if (won || timedOut) {
           const result: "won" | "lost" = won ? "won" : "lost";
           const newScore = { ...r.score };
@@ -163,8 +165,8 @@ export function FPSGame({
         }
         // next round — reset engine state & baselines
         engine.resetForRound();
-        baseKillsRef.current = state?.kills ?? 0; // after reset onState will catch up to 0
-        baseDeathsRef.current = state?.deaths ?? 0;
+        baseKillsRef.current = 0;
+        baseDeathsRef.current = 0;
         prevKillsRef.current = 0;
         prevDeathsRef.current = 0;
         setRound({
@@ -208,7 +210,7 @@ export function FPSGame({
           <RoundBanner round={round} agent={agent} />
 
           {/* Round objective chip */}
-          <RoundObjective round={round} agent={agent} />
+          <RoundObjective round={round} agent={agent} state={state} />
 
           {/* Minimap + kill feed */}
           {engineRef.current && <Minimap engine={engineRef.current} agent={agent} />}
