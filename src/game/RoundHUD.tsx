@@ -91,6 +91,31 @@ export function RoundObjective({
   if (round.phase !== "live") return null;
   const need = ROUND_CONFIG.killTarget;
   const objective = state?.objective;
+  const progress = objective
+    ? objective.phase === "planting"
+      ? objective.plantProgress / objective.plantDuration
+      : objective.phase === "planted"
+        ? objective.timeLeft / objective.detonateAfter
+        : objective.canPlant
+          ? 0.08
+          : 0
+    : 0;
+  const objectiveColor =
+    objective?.phase === "planted"
+      ? objective.timeLeft < 10
+        ? "#ff4d6d"
+        : "#ffd166"
+      : objective?.canPlant
+        ? "#5cffb0"
+        : agent.hue;
+  const statusLabel =
+    objective?.phase === "planted"
+      ? "PACK ARMED"
+      : objective?.phase === "planting"
+        ? "PLANTING"
+        : objective?.canPlant
+          ? "PLANT ZONE"
+          : "CARRYING";
   const packText =
     objective?.phase === "planted"
       ? `PACK ${objective.site} - ${Math.ceil(objective.timeLeft)}s`
@@ -101,14 +126,45 @@ export function RoundObjective({
           : "PACK CARRIED";
 
   return (
-    <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 flex flex-col items-center gap-1.5 animate-fade-in">
-      <div className="flex items-center gap-1.5 bg-card/70 backdrop-blur px-3 py-1.5 border border-border text-[10px] uppercase tracking-widest">
-        <Bomb className="w-3 h-3" style={{ color: agent.hue }} />
-        <span className="font-bold" style={{ color: agent.hue }}>
-          {packText}
-        </span>
+    <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 w-[min(360px,calc(100vw-32px))] animate-fade-in">
+      <div
+        className="bg-card/78 backdrop-blur border border-border px-3 py-2 clip-corner"
+        style={{ boxShadow: `0 0 18px ${objectiveColor}22, inset 3px 0 0 ${objectiveColor}` }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Bomb className="w-4 h-4 shrink-0" style={{ color: objectiveColor }} />
+            <div className="min-w-0">
+              <div className="text-[9px] uppercase tracking-[0.28em] text-muted-foreground">
+                {statusLabel}
+              </div>
+              <div
+                className="text-sm font-black uppercase leading-tight truncate"
+                style={{ color: objectiveColor }}
+              >
+                {packText}
+              </div>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground">Site</div>
+            <div className="text-lg font-black" style={{ color: objectiveColor }}>
+              {objective?.site ?? "--"}
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 h-1.5 bg-background/70 border border-border overflow-hidden">
+          <div
+            className="h-full transition-all duration-100"
+            style={{
+              width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
+              background: objectiveColor,
+              boxShadow: `0 0 10px ${objectiveColor}`,
+            }}
+          />
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 bg-card/70 backdrop-blur px-3 py-1.5 border border-border text-[10px] uppercase tracking-widest">
+      <div className="mt-1.5 mx-auto w-fit flex items-center gap-1.5 bg-card/70 backdrop-blur px-3 py-1.5 border border-border text-[10px] uppercase tracking-widest">
         <Crosshair className="w-3 h-3" style={{ color: agent.hue }} />
         <span className="text-muted-foreground">Kills:</span>
         <span className="font-bold" style={{ color: agent.hue }}>
@@ -178,20 +234,39 @@ export function Minimap({ engine, agent }: { engine: FPSEngine; agent: Agent }) 
         </div>
       )}
       {layout.sites.map((site) => (
-        <div
-          key={site.key}
-          className="absolute -translate-x-1/2 -translate-y-1/2 grid place-items-center w-5 h-5 rounded-full border text-[10px] font-black bg-background/70"
-          style={{
-            left: toPx(site.x),
-            top: toPx(site.z),
-            color: site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
-            borderColor:
-              site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
-          }}
-        >
-          {site.key}
+        <div key={site.key}>
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border opacity-40"
+            style={{
+              left: toPx(site.x),
+              top: toPx(site.z),
+              width: site.radius * scale * 2,
+              height: site.radius * scale * 2,
+              borderColor: site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
+              background:
+                site.key === "A"
+                  ? "rgba(92,255,176,0.08)"
+                  : site.key === "B"
+                    ? "rgba(255,209,102,0.08)"
+                    : "rgba(255,77,109,0.08)",
+            }}
+          />
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 grid place-items-center w-5 h-5 rounded-full border text-[10px] font-black bg-background/70"
+            style={{
+              left: toPx(site.x),
+              top: toPx(site.z),
+              color: site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
+              borderColor:
+                site.key === "A" ? "#5cffb0" : site.key === "B" ? "#ffd166" : "#ff4d6d",
+            }}
+          >
+            {site.key}
+          </div>
         </div>
       ))}
+      <SpawnDot label="ATK" x={toPx(layout.attackerSpawn.x)} y={toPx(layout.attackerSpawn.z)} hue="#5cffb0" />
+      <SpawnDot label="DEF" x={toPx(layout.defenderSpawn.x)} y={toPx(layout.defenderSpawn.z)} hue="#ff4d6d" />
       {/* bots */}
       {bots.map((b, i) => (
         <div
@@ -228,6 +303,17 @@ export function Minimap({ engine, agent }: { engine: FPSEngine; agent: Agent }) 
       <div className="absolute bottom-1 left-2 text-[9px] uppercase tracking-widest text-muted-foreground">
         Mini-map
       </div>
+    </div>
+  );
+}
+
+function SpawnDot({ label, x, y, hue }: { label: string; x: number; y: number; hue: string }) {
+  return (
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2 text-[7px] font-black border bg-background/75 px-1"
+      style={{ left: x, top: y, color: hue, borderColor: hue }}
+    >
+      {label}
     </div>
   );
 }

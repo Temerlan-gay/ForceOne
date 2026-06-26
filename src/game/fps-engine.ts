@@ -52,6 +52,7 @@ export class FPSEngine {
   private tracers: Tracer[] = [];
   private smokes: SmokeOrb[] = [];
   private plantedPack: THREE.Group | null = null;
+  private plantedPackLight: THREE.PointLight | null = null;
   private flashMeshes: { mesh: THREE.Mesh; life: number }[] = [];
   private smokePlanner: {
     key: AbilityKey;
@@ -1030,6 +1031,22 @@ export class FPSEngine {
   private addObjectiveMarkers() {
     const layout = this.getMapLayout();
     const siteColors: Record<string, number> = { A: 0x5cffb0, B: 0xffd166, C: 0xff4d6d };
+    const attackColor = 0x5cffb0;
+    const defenseColor = 0xff4d6d;
+
+    if (layout.mid) {
+      for (const site of layout.sites) {
+        this.addRouteLine(layout.attackerSpawn, layout.mid, attackColor, 0.16);
+        this.addRouteLine(layout.mid, site, siteColors[site.key] ?? 0xffffff, 0.13);
+        this.addRouteLine(layout.defenderSpawn, site, defenseColor, 0.1);
+      }
+    } else {
+      for (const site of layout.sites) {
+        this.addRouteLine(layout.attackerSpawn, site, siteColors[site.key] ?? attackColor, 0.13);
+        this.addRouteLine(layout.defenderSpawn, site, defenseColor, 0.1);
+      }
+    }
+
     for (const site of layout.sites) {
       const color = siteColors[site.key] ?? 0xffffff;
       const ring = new THREE.Mesh(
@@ -1059,7 +1076,50 @@ export class FPSEngine {
       fill.rotation.x = -Math.PI / 2;
       fill.position.set(site.x, 0.032, site.z);
       this.scene.add(fill);
-      this.addBillboardLabel(`PLANT ${site.key}`, site.x, 2.4, site.z, color);
+
+      const inner = new THREE.Mesh(
+        new THREE.RingGeometry(Math.max(1, site.radius * 0.42), Math.max(1.2, site.radius * 0.46), 72),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.38,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+      );
+      inner.rotation.x = -Math.PI / 2;
+      inner.position.set(site.x, 0.05, site.z);
+      this.scene.add(inner);
+
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const tick = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 0.08, 1.05),
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.78 }),
+        );
+        tick.position.set(
+          site.x + Math.cos(a) * (site.radius - 0.45),
+          0.09,
+          site.z + Math.sin(a) * (site.radius - 0.45),
+        );
+        tick.rotation.y = -a;
+        this.scene.add(tick);
+      }
+
+      for (const [dx, dz] of [
+        [-1, -1],
+        [1, -1],
+        [-1, 1],
+        [1, 1],
+      ] as Array<[number, number]>) {
+        this.addSitePylon(
+          site.x + dx * (site.radius * 0.62),
+          site.z + dz * (site.radius * 0.62),
+          color,
+        );
+      }
+
+      this.addBillboardLabel(`PLANT ${site.key}`, site.x, 2.8, site.z, color, site.description);
     }
 
     if (layout.mid) {
@@ -1076,11 +1136,63 @@ export class FPSEngine {
       mid.rotation.x = -Math.PI / 2;
       mid.position.set(layout.mid.x, 0.04, layout.mid.z);
       this.scene.add(mid);
-      this.addBillboardLabel("MID", layout.mid.x, 2.2, layout.mid.z, 0x88c4ff);
+      this.addBillboardLabel("MID", layout.mid.x, 2.3, layout.mid.z, 0x88c4ff, "Rotation lane");
     }
 
     this.addSpawnMarker("ATTACK", layout.attackerSpawn.x, layout.attackerSpawn.z, 0x5cffb0);
     this.addSpawnMarker("DEFENSE", layout.defenderSpawn.x, layout.defenderSpawn.z, 0xff4d6d);
+  }
+
+  private addRouteLine(
+    from: { x: number; z: number },
+    to: { x: number; z: number },
+    color: number,
+    opacity: number,
+  ) {
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    const len = Math.hypot(dx, dz);
+    if (len < 1) return;
+    const lane = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.45, len),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    lane.rotation.x = -Math.PI / 2;
+    lane.rotation.z = Math.atan2(dx, dz);
+    lane.position.set((from.x + to.x) / 2, 0.025, (from.z + to.z) / 2);
+    this.scene.add(lane);
+  }
+
+  private addSitePylon(x: number, z: number, color: number) {
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.22, 0.55, 10),
+      new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.55,
+        metalness: 0.35,
+        emissive: color,
+        emissiveIntensity: 0.1,
+      }),
+    );
+    base.position.set(x, 0.28, z);
+    this.scene.add(base);
+
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 12, 8),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }),
+    );
+    cap.position.set(x, 0.68, z);
+    this.scene.add(cap);
+
+    const light = new THREE.PointLight(color, 0.55, 5);
+    light.position.set(x, 0.9, z);
+    this.scene.add(light);
   }
 
   private addSpawnMarker(label: string, x: number, z: number, color: number) {
@@ -1100,30 +1212,42 @@ export class FPSEngine {
     this.addBillboardLabel(label, x, 2.0, z, color);
   }
 
-  private addBillboardLabel(text: string, x: number, y: number, z: number, color: number) {
+  private addBillboardLabel(
+    text: string,
+    x: number,
+    y: number,
+    z: number,
+    color: number,
+    subtext?: string,
+  ) {
     const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 64;
+    canvas.width = 384;
+    canvas.height = 104;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(7,10,18,0.72)";
+    ctx.fillStyle = "rgba(7,10,18,0.82)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = `#${color.toString(16).padStart(6, "0")}`;
     ctx.lineWidth = 4;
     ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     ctx.fillStyle = "#ffffff";
-    ctx.font = "700 28px Arial";
+    ctx.font = "800 34px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    ctx.fillText(text, canvas.width / 2, subtext ? 38 : canvas.height / 2);
+    if (subtext) {
+      ctx.fillStyle = "rgba(255,255,255,0.72)";
+      ctx.font = "600 16px Arial";
+      ctx.fillText(subtext.toUpperCase().slice(0, 34), canvas.width / 2, 76);
+    }
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     const sprite = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }),
     );
     sprite.position.set(x, y, z);
-    sprite.scale.set(5.6, 1.4, 1);
+    sprite.scale.set(6.4, 1.75, 1);
     this.scene.add(sprite);
   }
 
@@ -1732,7 +1856,14 @@ export class FPSEngine {
     if (objective.phase === "planted") {
       objective.canPlant = false;
       objective.timeLeft = Math.max(0, objective.timeLeft - dt);
-      if (this.plantedPack) this.plantedPack.rotation.y += dt * 2;
+      if (this.plantedPack) {
+        this.plantedPack.rotation.y += dt * 0.8;
+        const urgent = objective.timeLeft < 10;
+        const pulse = urgent ? 2.3 : 1.2;
+        const blink = (Math.sin(performance.now() / (urgent ? 80 : 180)) + 1) / 2;
+        this.plantedPack.scale.setScalar(1 + blink * 0.035);
+        if (this.plantedPackLight) this.plantedPackLight.intensity = pulse + blink * pulse;
+      }
       if (objective.timeLeft <= 0) {
         objective.phase = "detonated";
         this.run.message = "PACK DETONATED";
@@ -1823,6 +1954,62 @@ export class FPSEngine {
     const pulse = new THREE.PointLight(0xffd166, 1.5, 8);
     pulse.position.set(0, 0.7, 0);
     group.add(pulse);
+    this.plantedPackLight = pulse;
+
+    const strapMat = new THREE.MeshStandardMaterial({ color: 0x2c3442, roughness: 0.7, metalness: 0.2 });
+    for (const xOff of [-0.32, 0.32]) {
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.86), strapMat);
+      strap.position.set(xOff, 0.38, 0);
+      group.add(strap);
+    }
+
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0xff4d6d });
+    for (const [xOff, zOff, rot] of [
+      [-0.28, -0.18, 0.4],
+      [0.12, 0.18, -0.25],
+      [0.34, 0.06, 0.9],
+    ] as Array<[number, number, number]>) {
+      const wire = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.018, 6, 24), wireMat);
+      wire.position.set(xOff, 0.42, zOff);
+      wire.rotation.set(Math.PI / 2, 0, rot);
+      group.add(wire);
+    }
+
+    for (const [xOff, zOff, color] of [
+      [-0.42, 0.26, 0x5cffb0],
+      [-0.2, 0.28, 0xffd166],
+      [0.02, 0.28, 0xff4d6d],
+    ] as Array<[number, number, number]>) {
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 10, 8),
+        new THREE.MeshBasicMaterial({ color }),
+      );
+      led.position.set(xOff, 0.43, zOff);
+      group.add(led);
+    }
+
+    const keypadMat = new THREE.MeshBasicMaterial({ color: 0x9fb3c8 });
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 3; col++) {
+        const key = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.018, 0.055), keypadMat);
+        key.position.set(0.23 + col * 0.075, 0.435, -0.18 + row * 0.075);
+        group.add(key);
+      }
+    }
+
+    const halo = new THREE.Mesh(
+      new THREE.RingGeometry(0.95, 1.12, 56),
+      new THREE.MeshBasicMaterial({
+        color: 0xffd166,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = 0.02;
+    group.add(halo);
 
     group.position.set(x, 0.04, z);
     return group;
@@ -1839,6 +2026,7 @@ export class FPSEngine {
       else material?.dispose?.();
     });
     this.plantedPack = null;
+    this.plantedPackLight = null;
   }
 
   private update(dt: number) {

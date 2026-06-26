@@ -74,7 +74,7 @@ export const MAPS: GameMap[] = [
   {
     id: "dunefall",
     name: "Dunefall",
-    tagline: "Desert military zone · day",
+    tagline: "Desert military zone - day",
     lore:
       "A buried weapons base split into long sand lanes, hard cover and a contested center route.",
     theme: "desert",
@@ -102,7 +102,7 @@ export const MAPS: GameMap[] = [
   {
     id: "ironhaven",
     name: "Ironhaven",
-    tagline: "Industrial factory · evening",
+    tagline: "Industrial factory - evening",
     lore: "A drone factory with metal catwalks, crate stacks and a noisy middle lane.",
     theme: "urban",
     timeOfDay: "evening",
@@ -121,7 +121,7 @@ export const MAPS: GameMap[] = [
   {
     id: "neon_district",
     name: "Neon District",
-    tagline: "Cyberpunk city · night · 3 sites",
+    tagline: "Cyberpunk city - night - 3 sites",
     lore: "Rain, neon and rooftops create a fast three-site map with no dedicated mid lane.",
     theme: "neon",
     timeOfDay: "night",
@@ -142,7 +142,7 @@ export const MAPS: GameMap[] = [
   {
     id: "frostline",
     name: "Frostline",
-    tagline: "Arctic research base · day",
+    tagline: "Arctic research base - day",
     lore: "A frozen lab complex with low visibility outside and tight indoor plant zones.",
     theme: "arctic",
     timeOfDay: "day",
@@ -161,7 +161,7 @@ export const MAPS: GameMap[] = [
   {
     id: "temple_core",
     name: "Temple Core",
-    tagline: "Ancient ruins + tech · day to night · 3 sites",
+    tagline: "Ancient ruins + tech - day to night - 3 sites",
     lore: "A three-site temple map where the old mid lane is replaced by Plant C.",
     theme: "temple",
     timeOfDay: "day",
