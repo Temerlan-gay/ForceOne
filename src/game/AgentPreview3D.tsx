@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Agent } from "@/game/data/agents";
 import { buildAgentModel } from "@/game/agent-model";
@@ -6,12 +6,21 @@ import { buildAgentModel } from "@/game/agent-model";
 /** Rotating 3D preview of an agent. Used on the Agent Select screen. */
 export function AgentPreview3D({ agent, className }: { agent: Agent; className?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const [previewUnavailable, setPreviewUnavailable] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    setPreviewUnavailable(false);
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (error) {
+      console.warn("3D agent preview is unavailable", error);
+      setPreviewUnavailable(true);
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     const resize = () => {
       const w = host.clientWidth,
@@ -117,10 +126,29 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
+      scene.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        mesh.geometry?.dispose();
+        const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+        for (const material of materials) material.dispose();
+      });
+      renderer.renderLists.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
     };
   }, [agent]);
 
-  return <div ref={hostRef} className={className} />;
+  return (
+    <div ref={hostRef} className={className}>
+      {previewUnavailable && (
+        <div className="absolute inset-0 grid place-items-center text-center text-sm text-muted-foreground">
+          <div>
+            <div className="font-black text-foreground uppercase">{agent.name}</div>
+            <div>3D-превью недоступно, выбор персонажа продолжает работать</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

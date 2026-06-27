@@ -202,7 +202,7 @@ export function AgentSelect({
         {/* Preview */}
         <section className="col-span-6 flex flex-col min-h-0">
           <div className="relative flex-1 border border-border bg-card/30 clip-corner overflow-hidden">
-            <AgentPreview3D key={agent.id} agent={agent} className="absolute inset-0" />
+            <AgentPreview3D agent={agent} className="absolute inset-0" />
             {/* Big watermark name */}
             <div className="absolute inset-0 flex items-end pointer-events-none">
               <div className="px-8 pb-8 w-full">
