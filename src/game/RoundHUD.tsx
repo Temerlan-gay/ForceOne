@@ -211,6 +211,7 @@ export function Minimap({ engine, agent }: { engine: FPSEngine; agent: Agent }) 
   const size = 168;
   const player = engine.getPlayerSnapshot();
   const bots = engine.getBotSnapshots();
+  const allies = engine.getAllySnapshots();
   const layout = engine.getObjectiveLayout();
   const scale = size / (half * 2);
   const toPx = (v: number) => size / 2 + v * scale;
@@ -268,6 +269,13 @@ export function Minimap({ engine, agent }: { engine: FPSEngine; agent: Agent }) 
       <SpawnDot label="ATK" x={toPx(layout.attackerSpawn.x)} y={toPx(layout.attackerSpawn.z)} hue="#5cffb0" />
       <SpawnDot label="DEF" x={toPx(layout.defenderSpawn.x)} y={toPx(layout.defenderSpawn.z)} hue="#ff4d6d" />
       {/* bots */}
+      {allies.map((ally, i) => (
+        <div
+          key={`ally-${i}`}
+          className="absolute w-1.5 h-1.5 rounded-full bg-emerald-300"
+          style={{ left: toPx(ally.x) - 3, top: toPx(ally.z) - 3, boxShadow: "0 0 6px #5cffb0" }}
+        />
+      ))}
       {bots.map((b, i) => (
         <div
           key={i}

@@ -103,8 +103,8 @@ export function App() {
     setAgent(chosenAgent);
     setMap(rolledMap);
     const cfgMap: Record<MatchMode, GameConfig> = {
-      quick: { mode: "quick", killsToWin: 10, botCount: 3 },
-      unranked: { mode: "unranked", killsToWin: 15, botCount: 4 },
+      quick: { mode: "quick", killsToWin: 10, botCount: 5 },
+      unranked: { mode: "unranked", killsToWin: 15, botCount: 5 },
       ranked: { mode: "ranked", killsToWin: 20, botCount: 5 },
     };
     const playerName = profile.username || `Op_${profile.level}`;

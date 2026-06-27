@@ -49,10 +49,12 @@ export class FPSEngine {
   private walls: THREE.Box3[] = [];
   private wallMeshes: THREE.Mesh[] = [];
   private bots: Bot[] = [];
+  private allies: THREE.Group[] = [];
   private tracers: Tracer[] = [];
   private smokes: SmokeOrb[] = [];
   private plantedPack: THREE.Group | null = null;
   private plantedPackLight: THREE.PointLight | null = null;
+  private spawnPack: THREE.Group | null = null;
   private flashMeshes: { mesh: THREE.Mesh; life: number }[] = [];
   private smokePlanner: {
     key: AbilityKey;
@@ -151,7 +153,10 @@ export class FPSEngine {
     this.renderer.setSize(container.clientWidth, container.clientHeight, false);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = settings.graphics === "high" ? 1.08 : 1;
+    // Exposure belongs to the map lighting, not to the graphics preset.  Bright
+    // maps stay comfortable while dark maps retain their mood without hiding
+    // opponents and geometry in crushed shadows.
+    this.renderer.toneMappingExposure = this.getExposureForTimeOfDay(cfg.timeOfDay || "day");
     this.renderer.shadowMap.enabled = settings.graphics !== "low";
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
@@ -174,6 +179,7 @@ export class FPSEngine {
 
     this.buildLevel();
     this.spawnBots(cfg.botCount);
+    this.spawnAllies();
 
     if (cfg.multiplayer) {
       this.mp = new Multiplayer(cfg.room || "public-1", cfg.playerName || "Operator");
@@ -277,8 +283,8 @@ export class FPSEngine {
         hemiSky: 0xbfd8f0,
         hemiGround: 0x6b6253,
         sunCol: 0xfff1d6,
-        sunInt: 1.1,
-        hemiInt: 0.85,
+        sunInt: 1.0,
+        hemiInt: 0.78,
       },
       evening: {
         sky: 0x6e4a55,
@@ -286,23 +292,29 @@ export class FPSEngine {
         hemiSky: 0xd49070,
         hemiGround: 0x2a2030,
         sunCol: 0xff9a5a,
-        sunInt: 0.8,
-        hemiInt: 0.55,
+        sunInt: 0.82,
+        hemiInt: 0.62,
       },
       night: {
-        sky: 0x0a0e1a,
-        fog: 0x0a0e1a,
-        hemiSky: 0x4a5a78,
-        hemiGround: 0x0a0a14,
-        sunCol: 0x7088b0,
-        sunInt: 0.35,
-        hemiInt: 0.4,
+        sky: 0x0b1120,
+        fog: 0x10182a,
+        hemiSky: 0x7186ad,
+        hemiGround: 0x11182a,
+        sunCol: 0x91acd8,
+        sunInt: 0.52,
+        hemiInt: 0.66,
       },
     };
 
     const t = themeCols[theme];
     const s = todCols[tod];
     return { ...t, ...s };
+  }
+
+  private getExposureForTimeOfDay(timeOfDay: string) {
+    if (timeOfDay === "night") return 1.18;
+    if (timeOfDay === "evening") return 1.02;
+    return 0.92;
   }
 
   private makeCanvasTexture(
@@ -449,6 +461,42 @@ export class FPSEngine {
     });
   }
 
+  private getWallDefs(): number[][] {
+    const half = this.getMapLayout().halfSize;
+    const perimeter = [
+      [0, -half, half * 2, 1, 6], [0, half, half * 2, 1, 6],
+      [-half, 0, 1, half * 2, 6], [half, 0, 1, half * 2, 6],
+    ];
+    const plans: Record<string, number[][]> = {
+      dunefall: [
+        [-24, 12, 24, 2, 4], [22, 18, 2, 30, 4], [-38, -8, 2, 28, 4],
+        [-18, -24, 22, 2, 4], [20, -30, 18, 2, 4], [2, -8, 2, 22, 4],
+        [-45, 25, 8, 3, 2], [38, 30, 10, 3, 2], [-8, 32, 4, 4, 1.5],
+      ],
+      ironhaven: [
+        [-34, 8, 2, 44, 5], [32, -4, 2, 46, 5], [0, 22, 34, 2, 4],
+        [-5, -20, 42, 2, 4], [-48, -25, 16, 2, 4], [44, 18, 18, 2, 4],
+        [-15, 5, 5, 8, 1.5], [16, 7, 8, 5, 1.5], [0, -38, 12, 3, 2.4],
+      ],
+      neon_district: [
+        [-30, 20, 2, 34, 5], [30, 24, 2, 28, 5], [0, 10, 24, 2, 4],
+        [-18, -18, 26, 2, 4], [20, -24, 2, 24, 4], [42, 2, 18, 2, 4],
+        [-45, -38, 14, 2, 4], [4, 34, 8, 4, 1.5], [-8, -38, 4, 8, 1.5],
+      ],
+      frostline: [
+        [-25, 8, 2, 38, 4], [25, 4, 2, 34, 4], [0, 20, 28, 2, 4],
+        [-7, -22, 2, 26, 4], [-38, -20, 16, 2, 4], [38, -14, 14, 2, 4],
+        [-13, 2, 5, 5, 1.5], [13, 2, 5, 5, 1.5], [0, 36, 12, 2, 3],
+      ],
+      temple_core: [
+        [-32, 16, 2, 42, 5], [32, 16, 2, 42, 5], [0, 28, 36, 2, 5],
+        [-18, -18, 24, 2, 4], [18, -18, 24, 2, 4], [0, -38, 2, 20, 4],
+        [-48, -6, 14, 2, 4], [48, -6, 14, 2, 4], [0, 2, 7, 7, 1.5],
+      ],
+    };
+    return [...perimeter, ...(plans[this.cfg.mapId || ""] ?? plans.dunefall)];
+  }
+
   private addWallDetails(mesh: THREE.Mesh, isCrate: boolean, index: number) {
     const [w, h, d] = (mesh.geometry as THREE.BoxGeometry).parameters
       ? [
@@ -545,6 +593,8 @@ export class FPSEngine {
     this.dirLight.shadow.camera.top = 55;
     this.dirLight.shadow.camera.bottom = -55;
     this.dirLight.shadow.bias = -0.00018;
+    this.dirLight.shadow.normalBias = 0.025;
+    this.dirLight.shadow.radius = this.settings.graphics === "high" ? 3 : 1;
     this.scene.add(this.dirLight);
 
     // Theme accent fills (warm lanterns in temple, cold pools in arctic, neon in neon city...)
@@ -577,23 +627,24 @@ export class FPSEngine {
 
     // ===== Ground =====
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(120, 120, 24, 24),
+      new THREE.PlaneGeometry(this.getMapLayout().halfSize * 2, this.getMapLayout().halfSize * 2, 32, 32),
       this.makeThemeMaterial(theme, pal.ground, "ground", pal.rough, pal.metal * 0.3),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
+    this.addGroundWear(theme);
 
     // Subtle grid only for neon theme; natural maps get scattered detail props instead
     if (theme === "neon") {
-      const grid = new THREE.GridHelper(120, 60, 0x2a3450, 0x1a2030);
+      const grid = new THREE.GridHelper(this.getMapLayout().halfSize * 2, 72, 0x2a3450, 0x1a2030);
       (grid.material as THREE.Material).transparent = true;
       (grid.material as THREE.Material).opacity = 0.35;
       this.scene.add(grid);
     }
 
     // ====== WALLS (interior layout — same gameplay shape across all themes) ======
-    const wallDefs: number[][] = [
+    const legacyWallDefs: number[][] = [
       // outer perimeter (open arena 80x80)
       [0, -40, 80, 1, 5],
       [0, 40, 80, 1, 5],
@@ -647,6 +698,8 @@ export class FPSEngine {
       [-22, 22, 1, 8, 3],
       [22, -22, 1, 8, 3],
     ];
+    void legacyWallDefs;
+    const wallDefs = this.getWallDefs();
 
     const wallMat = this.makeThemeMaterial(
       theme,
@@ -656,11 +709,20 @@ export class FPSEngine {
       pal.metal,
     );
     const crateMat = this.makeThemeMaterial(theme, pal.crate, "crate", 0.72, 0.08);
+    const structuralMat = this.makeThemeMaterial(
+      theme,
+      pal.accent,
+      "roof",
+      theme === "neon" || theme === "urban" ? 0.38 : 0.82,
+      theme === "neon" || theme === "urban" ? 0.48 : 0.08,
+    );
     for (let i = 0; i < wallDefs.length; i++) {
       const [x, z, w, d, h] = wallDefs[i];
       // crates (low boxes ≤ 1.6 tall) get the wood/crate material
       const isCrate = h <= 1.6;
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), isCrate ? crateMat : wallMat);
+      const isStructural = !isCrate && i >= 4 && i % 3 === 0;
+      const material = isCrate ? crateMat : isStructural ? structuralMat : wallMat;
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
       mesh.position.set(x, h / 2, z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -671,6 +733,9 @@ export class FPSEngine {
     }
 
     this.addObjectiveMarkers();
+    const attackSpawn = this.getMapLayout().attackerSpawn;
+    this.spawnPack = this.createPackMesh(attackSpawn.x, attackSpawn.z, false);
+    this.scene.add(this.spawnPack);
 
     // ===== Theme decoration (no collision) =====
     if (theme === "desert") {
@@ -969,8 +1034,9 @@ export class FPSEngine {
         hemi: 0xbfd8f0,
         hemig: 0x6b6253,
         sun: 0xfff1d6,
-        sunI: 1.1,
-        hemiI: 0.85,
+        sunI: 1.0,
+        hemiI: 0.78,
+        exposure: 0.92,
       },
       {
         skyR: 0x6e4a55,
@@ -978,17 +1044,19 @@ export class FPSEngine {
         hemi: 0xd49070,
         hemig: 0x2a2030,
         sun: 0xff9a5a,
-        sunI: 0.8,
-        hemiI: 0.55,
+        sunI: 0.82,
+        hemiI: 0.62,
+        exposure: 1.02,
       },
       {
-        skyR: 0x0a0e1a,
-        fog: 0x0a0e1a,
-        hemi: 0x4a5a78,
-        hemig: 0x0a0a14,
-        sun: 0x7088b0,
-        sunI: 0.35,
-        hemiI: 0.4,
+        skyR: 0x0b1120,
+        fog: 0x10182a,
+        hemi: 0x7186ad,
+        hemig: 0x11182a,
+        sun: 0x91acd8,
+        sunI: 0.52,
+        hemiI: 0.66,
+        exposure: 1.18,
       },
     ];
     const seg = t * 3; // 0..3
@@ -1007,6 +1075,7 @@ export class FPSEngine {
     this.hemi.intensity = lerpNum(a.hemiI, b.hemiI, f);
     this.dirLight.color.copy(lerpColor(a.sun, b.sun, f));
     this.dirLight.intensity = lerpNum(a.sunI, b.sunI, f);
+    this.renderer.toneMappingExposure = lerpNum(a.exposure, b.exposure, f);
   }
 
   private spawnBots(n: number) {
@@ -1017,14 +1086,28 @@ export class FPSEngine {
     }
   }
 
+  private spawnAllies() {
+    const spawn = this.getMapLayout().attackerSpawn;
+    const offsets: Array<[number, number]> = [[-4, 1.5], [4, 1.5], [-7, -1.5], [7, -1.5]];
+    const pool = AGENTS.filter((agent) => agent.id !== this.cfg.agent?.id);
+    for (let i = 0; i < 4; i++) {
+      const ally = buildAgentModel(pool[i % pool.length] ?? AGENTS[0]);
+      ally.position.set(spawn.x + offsets[i][0], 0, spawn.z + offsets[i][1]);
+      ally.rotation.y = Math.PI;
+      ally.userData.spawnOffset = offsets[i];
+      this.scene.add(ally);
+      this.allies.push(ally);
+    }
+  }
+
   private getDefenderSpawns() {
     const { defenderSpawn } = this.getMapLayout();
     return [
       new THREE.Vector3(defenderSpawn.x, 0, defenderSpawn.z),
-      new THREE.Vector3(defenderSpawn.x - 7, 0, defenderSpawn.z + 4),
-      new THREE.Vector3(defenderSpawn.x + 7, 0, defenderSpawn.z + 4),
-      new THREE.Vector3(defenderSpawn.x - 12, 0, defenderSpawn.z + 9),
-      new THREE.Vector3(defenderSpawn.x + 12, 0, defenderSpawn.z + 9),
+      new THREE.Vector3(defenderSpawn.x - 5, 0, defenderSpawn.z + 2),
+      new THREE.Vector3(defenderSpawn.x + 5, 0, defenderSpawn.z + 2),
+      new THREE.Vector3(defenderSpawn.x - 10, 0, defenderSpawn.z + 5),
+      new THREE.Vector3(defenderSpawn.x + 10, 0, defenderSpawn.z + 5),
     ];
   }
 
@@ -1049,12 +1132,24 @@ export class FPSEngine {
 
     for (const site of layout.sites) {
       const color = siteColors[site.key] ?? 0xffffff;
+      const slab = new THREE.Mesh(
+        new THREE.CylinderGeometry(site.radius - 0.28, site.radius - 0.18, 0.08, 72),
+        new THREE.MeshStandardMaterial({
+          color: 0x34383b,
+          roughness: 0.88,
+          metalness: 0.08,
+        }),
+      );
+      slab.position.set(site.x, 0.035, site.z);
+      slab.receiveShadow = true;
+      this.scene.add(slab);
+
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(site.radius - 0.2, site.radius, 72),
         new THREE.MeshBasicMaterial({
           color,
           transparent: true,
-          opacity: 0.78,
+          opacity: 0.5,
           side: THREE.DoubleSide,
           depthWrite: false,
         }),
@@ -1068,7 +1163,7 @@ export class FPSEngine {
         new THREE.MeshBasicMaterial({
           color,
           transparent: true,
-          opacity: 0.08,
+          opacity: 0.035,
           side: THREE.DoubleSide,
           depthWrite: false,
         }),
@@ -1082,7 +1177,7 @@ export class FPSEngine {
         new THREE.MeshBasicMaterial({
           color,
           transparent: true,
-          opacity: 0.38,
+          opacity: 0.24,
           side: THREE.DoubleSide,
           depthWrite: false,
         }),
@@ -1094,8 +1189,13 @@ export class FPSEngine {
       for (let i = 0; i < 16; i++) {
         const a = (i / 16) * Math.PI * 2;
         const tick = new THREE.Mesh(
-          new THREE.BoxGeometry(0.16, 0.08, 1.05),
-          new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.78 }),
+          new THREE.BoxGeometry(0.2, 0.035, 1.05),
+          new THREE.MeshStandardMaterial({
+            color: i % 2 ? 0x17191b : color,
+            roughness: 0.82,
+            emissive: color,
+            emissiveIntensity: i % 2 ? 0 : 0.08,
+          }),
         );
         tick.position.set(
           site.x + Math.cos(a) * (site.radius - 0.45),
@@ -1141,6 +1241,35 @@ export class FPSEngine {
 
     this.addSpawnMarker("ATTACK", layout.attackerSpawn.x, layout.attackerSpawn.z, 0x5cffb0);
     this.addSpawnMarker("DEFENSE", layout.defenderSpawn.x, layout.defenderSpawn.z, 0xff4d6d);
+  }
+
+  private addGroundWear(theme: string) {
+    if (this.settings.graphics === "low") return;
+    const stainColor = theme === "arctic" ? 0x91a6b3 : theme === "desert" ? 0x6f5137 : 0x171b1d;
+    const stainMat = new THREE.MeshBasicMaterial({
+      color: stainColor,
+      transparent: true,
+      opacity: theme === "arctic" ? 0.1 : 0.16,
+      depthWrite: false,
+    });
+    for (let i = 0; i < 26; i++) {
+      const stain = new THREE.Mesh(new THREE.CircleGeometry(0.3 + Math.random() * 1.15, 14), stainMat);
+      stain.rotation.x = -Math.PI / 2;
+      stain.scale.set(1, 0.35 + Math.random() * 0.8, 1);
+      stain.rotation.z = Math.random() * Math.PI;
+      stain.position.set(-36 + Math.random() * 72, 0.012, -36 + Math.random() * 72);
+      this.scene.add(stain);
+    }
+
+    const seamMat = new THREE.MeshBasicMaterial({ color: 0x111416, transparent: true, opacity: 0.24 });
+    for (let i = 0; i < 18; i++) {
+      const length = 0.8 + Math.random() * 3.2;
+      const crack = new THREE.Mesh(new THREE.PlaneGeometry(0.025, length), seamMat);
+      crack.rotation.x = -Math.PI / 2;
+      crack.rotation.z = Math.random() * Math.PI;
+      crack.position.set(-35 + Math.random() * 70, 0.018, -35 + Math.random() * 70);
+      this.scene.add(crack);
+    }
   }
 
   private addRouteLine(
@@ -1844,6 +1973,7 @@ export class FPSEngine {
 
   private updateObjective(dt: number) {
     const objective = this.run.objective;
+    if (this.spawnPack) this.spawnPack.visible = this.paused && objective.phase === "carried";
     if (this.paused || objective.phase === "detonated") {
       objective.canPlant = false;
       if (objective.phase === "planting") {
@@ -1917,11 +2047,11 @@ export class FPSEngine {
     this.run.msgTimer = 3;
 
     this.clearPlantedPack();
-    this.plantedPack = this.createPackMesh(site.x, site.z);
+    this.plantedPack = this.createPackMesh(site.x, site.z, true);
     this.scene.add(this.plantedPack);
   }
 
-  private createPackMesh(x: number, z: number) {
+  private createPackMesh(x: number, z: number, active = true) {
     const group = new THREE.Group();
     const body = new THREE.Mesh(
       new THREE.BoxGeometry(1.1, 0.28, 0.75),
@@ -1934,7 +2064,24 @@ export class FPSEngine {
       }),
     );
     body.position.y = 0.18;
+    body.castShadow = true;
+    body.receiveShadow = true;
     group.add(body);
+
+    const panelMat = new THREE.MeshStandardMaterial({ color: 0x252c32, roughness: 0.32, metalness: 0.72 });
+    const topPanel = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.035, 0.52), panelMat);
+    topPanel.position.set(0, 0.34, 0);
+    topPanel.castShadow = true;
+    group.add(topPanel);
+
+    const boltMat = new THREE.MeshStandardMaterial({ color: 0x7b858d, roughness: 0.3, metalness: 0.9 });
+    for (const bx of [-0.44, 0.44]) {
+      for (const bz of [-0.27, 0.27]) {
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.025, 10), boltMat);
+        bolt.position.set(bx, 0.35, bz);
+        group.add(bolt);
+      }
+    }
 
     const screen = new THREE.Mesh(
       new THREE.BoxGeometry(0.42, 0.04, 0.28),
@@ -1951,10 +2098,10 @@ export class FPSEngine {
     antenna.rotation.z = 0.35;
     group.add(antenna);
 
-    const pulse = new THREE.PointLight(0xffd166, 1.5, 8);
+    const pulse = new THREE.PointLight(0xff9d3d, 1.1, 6);
     pulse.position.set(0, 0.7, 0);
     group.add(pulse);
-    this.plantedPackLight = pulse;
+    if (active) this.plantedPackLight = pulse;
 
     const strapMat = new THREE.MeshStandardMaterial({ color: 0x2c3442, roughness: 0.7, metalness: 0.2 });
     for (const xOff of [-0.32, 0.32]) {
@@ -2276,7 +2423,7 @@ export class FPSEngine {
     this.paused = v;
   }
   getMapHalfSize() {
-    return 40;
+    return this.getMapLayout().halfSize;
   }
   getObjectiveLayout() {
     return this.getMapLayout();
@@ -2286,6 +2433,9 @@ export class FPSEngine {
   }
   getBotSnapshots() {
     return this.bots.map((b) => ({ x: b.pos.x, z: b.pos.z, alive: b.alive }));
+  }
+  getAllySnapshots() {
+    return this.allies.map((ally) => ({ x: ally.position.x, z: ally.position.z }));
   }
   /** Reset per-round player state without disposing the engine. */
   resetForRound() {
@@ -2318,6 +2468,11 @@ export class FPSEngine {
     this.playerPos.set(layout.attackerSpawn.x, this.playerHeight, layout.attackerSpawn.z);
     this.playerVel.set(0, 0, 0);
     this.yaw = Math.PI;
+    for (const ally of this.allies) {
+      const [x, z] = ally.userData.spawnOffset as [number, number];
+      ally.position.set(layout.attackerSpawn.x + x, 0, layout.attackerSpawn.z + z);
+      ally.visible = true;
+    }
 
     const spawns = this.getDefenderSpawns();
     for (let i = 0; i < this.bots.length; i++) {

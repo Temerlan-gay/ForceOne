@@ -21,6 +21,7 @@ export type MapSiteLayout = SiteInfo &
   };
 
 export type MapLayout = {
+  halfSize: number;
   attackerSpawn: MapPoint;
   defenderSpawn: MapPoint;
   mid?: MapPoint & { name: string };
@@ -46,9 +47,11 @@ const twoSiteLayout = (
   a: Omit<MapSiteLayout, "key">,
   b: Omit<MapSiteLayout, "key">,
   mid: MapPoint & { name: string },
+  halfSize = 60,
 ): MapLayout => ({
-  attackerSpawn: { x: 0, z: 34 },
-  defenderSpawn: { x: 0, z: -34 },
+  halfSize,
+  attackerSpawn: { x: 0, z: halfSize - 8 },
+  defenderSpawn: { x: 0, z: -halfSize + 8 },
   mid,
   sites: [
     { key: "A", ...a },
@@ -60,9 +63,11 @@ const threeSiteLayout = (
   a: Omit<MapSiteLayout, "key">,
   b: Omit<MapSiteLayout, "key">,
   c: Omit<MapSiteLayout, "key">,
+  halfSize = 64,
 ): MapLayout => ({
-  attackerSpawn: { x: 0, z: 34 },
-  defenderSpawn: { x: 0, z: -34 },
+  halfSize,
+  attackerSpawn: { x: 0, z: halfSize - 8 },
+  defenderSpawn: { x: 0, z: -halfSize + 8 },
   sites: [
     { key: "A", ...a },
     { key: "B", ...b },
@@ -93,9 +98,10 @@ export const MAPS: GameMap[] = [
       },
     ],
     layout: twoSiteLayout(
-      { name: "Plant A", description: "Command center", x: -24, z: -18, radius: 6 },
-      { name: "Plant B", description: "Container yard", x: 24, z: -18, radius: 6 },
-      { name: "Mid", x: 0, z: 0 },
+      { name: "Plant A", description: "Command center", x: -38, z: -28, radius: 7 },
+      { name: "Plant B", description: "Container yard", x: 36, z: -22, radius: 7 },
+      { name: "Mid", x: -4, z: 2 },
+      64,
     ),
     preview: "linear-gradient(135deg, #d9a066 0%, #b07a3a 55%, #5a3a1c 100%)",
   },
@@ -112,9 +118,10 @@ export const MAPS: GameMap[] = [
       { key: "B", name: "Plant B", description: "Warehouse site with cranes and containers." },
     ],
     layout: twoSiteLayout(
-      { name: "Plant A", description: "Factory floor", x: -25, z: -10, radius: 6 },
-      { name: "Plant B", description: "Warehouse", x: 25, z: 10, radius: 6 },
-      { name: "Mid", x: 0, z: 0 },
+      { name: "Plant A", description: "Factory floor", x: -44, z: -24, radius: 7 },
+      { name: "Plant B", description: "Warehouse", x: 38, z: -8, radius: 7 },
+      { name: "Mid", x: 5, z: 5 },
+      70,
     ),
     preview: "linear-gradient(135deg, #7a7d84 0%, #3a3e48 55%, #15181f 100%)",
   },
@@ -132,9 +139,10 @@ export const MAPS: GameMap[] = [
       { key: "C", name: "Plant C", description: "Arcade site with short corners and glass cover." },
     ],
     layout: threeSiteLayout(
-      { name: "Plant A", description: "Plaza", x: -25, z: -18, radius: 5.5 },
-      { name: "Plant B", description: "Skyline", x: 0, z: -24, radius: 5.5 },
-      { name: "Plant C", description: "Arcade", x: 25, z: -18, radius: 5.5 },
+      { name: "Plant A", description: "Plaza", x: -42, z: -25, radius: 6.5 },
+      { name: "Plant B", description: "Skyline", x: 2, z: -40, radius: 6.5 },
+      { name: "Plant C", description: "Arcade", x: 43, z: -16, radius: 6.5 },
+      68,
     ),
     preview: "linear-gradient(135deg, #0a0e2c 0%, #1d2670 40%, #ff2cb4 100%)",
     image: neonCityImg,
@@ -152,9 +160,10 @@ export const MAPS: GameMap[] = [
       { key: "B", name: "Plant B", description: "Outer perimeter with poor visibility." },
     ],
     layout: twoSiteLayout(
-      { name: "Plant A", description: "Lab dome", x: -22, z: -22, radius: 6 },
-      { name: "Plant B", description: "Outer perimeter", x: 22, z: -22, radius: 6 },
-      { name: "Mid", x: 0, z: -2 },
+      { name: "Plant A", description: "Lab dome", x: -32, z: -34, radius: 7 },
+      { name: "Plant B", description: "Outer perimeter", x: 35, z: -28, radius: 7 },
+      { name: "Mid", x: 8, z: -4 },
+      60,
     ),
     preview: "linear-gradient(135deg, #cfe6f2 0%, #6f99b8 55%, #1f3a55 100%)",
   },
@@ -173,9 +182,10 @@ export const MAPS: GameMap[] = [
       { key: "C", name: "Plant C", description: "Lower relic room replacing the mid lane." },
     ],
     layout: threeSiteLayout(
-      { name: "Plant A", description: "Inner shrine", x: -24, z: -16, radius: 5.5 },
-      { name: "Plant B", description: "Core yard", x: 24, z: -16, radius: 5.5 },
-      { name: "Plant C", description: "Relic room", x: 0, z: -2, radius: 5.5 },
+      { name: "Plant A", description: "Inner shrine", x: -44, z: -30, radius: 6.5 },
+      { name: "Plant B", description: "Core yard", x: 42, z: -30, radius: 6.5 },
+      { name: "Plant C", description: "Relic room", x: -2, z: -8, radius: 6.5 },
+      72,
     ),
     preview: "linear-gradient(135deg, #4a6b3a 0%, #2f4a25 55%, #18271a 100%)",
   },
