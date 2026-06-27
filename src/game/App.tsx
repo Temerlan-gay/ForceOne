@@ -14,6 +14,7 @@ import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from "@/g
 import { AGENTS, ROLE_DETAILS, type Agent } from "@/game/data/agents";
 import { WEAPONS, CATEGORIES, type Weapon } from "@/game/data/weapons";
 import { MAPS, type GameMap } from "@/game/data/maps";
+import { SERVER_REGIONS, measureRegionPing, type ServerRegionId } from "@/game/data/regions";
 import { AgentSelect } from "@/game/AgentSelect";
 
 import { useAuth, signOut } from "@/hooks/useAuth";
@@ -54,6 +55,9 @@ export function App() {
   const [multiplayer, setMultiplayer] = useState<boolean>(true);
   const [pendingMode, setPendingMode] = useState<MatchMode | null>(null);
   const [rolledMap, setRolledMap] = useState<GameMap | null>(null);
+  const [serverRegion, setServerRegion] = useState<ServerRegionId>(() =>
+    (localStorage.getItem("force_one_region") as ServerRegionId) || "kz-astana",
+  );
 
   // Hydrate profile from DB when the user signs in
   useEffect(() => {
@@ -111,7 +115,8 @@ export function App() {
     setCfg({
       ...cfgMap[pendingMode],
       multiplayer,
-      room: `${rolledMap.id}-${pendingMode}`,
+      room: `${serverRegion}:${rolledMap.id}-${pendingMode}`,
+      regionId: serverRegion,
       playerName,
       mapId: rolledMap.id,
       mapTheme: rolledMap.theme,
@@ -205,6 +210,11 @@ export function App() {
               agent={agent}
               map={map}
               multiplayer={multiplayer}
+              serverRegion={serverRegion}
+              onPickRegion={(region) => {
+                setServerRegion(region);
+                localStorage.setItem("force_one_region", region);
+              }}
               onToggleMultiplayer={setMultiplayer}
               onPickMap={setMap}
               onStart={startMatch}
@@ -381,6 +391,8 @@ function PlayPage({
   agent,
   map,
   multiplayer,
+  serverRegion,
+  onPickRegion,
   onToggleMultiplayer,
   onPickMap,
   onStart,
@@ -389,11 +401,21 @@ function PlayPage({
   agent: Agent;
   map: GameMap;
   multiplayer: boolean;
+  serverRegion: ServerRegionId;
+  onPickRegion: (region: ServerRegionId) => void;
   onToggleMultiplayer: (v: boolean) => void;
   onPickMap: (m: GameMap) => void;
   onStart: (m: MatchMode) => void;
 }) {
   const rankedLocked = profile.level < 15;
+  const [regionPings, setRegionPings] = useState<Record<string, number | null | undefined>>({});
+  useEffect(() => {
+    let active = true;
+    Promise.all(SERVER_REGIONS.map(async (region) => [region.id, await measureRegionPing(region)] as const)).then((entries) => {
+      if (active) setRegionPings(Object.fromEntries(entries));
+    });
+    return () => { active = false; };
+  }, []);
   return (
     <div>
       <PageHeader
@@ -464,6 +486,26 @@ function PlayPage({
           />
         </button>
       </div>
+
+      {multiplayer && (
+        <div className="mb-5">
+          <div className="mb-2 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Регион сервера</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {SERVER_REGIONS.map((region) => {
+              const ping = regionPings[region.id];
+              const selected = region.id === serverRegion;
+              const pingColor = ping == null ? "text-muted-foreground" : ping < 70 ? "text-emerald-300" : ping < 130 ? "text-amber-300" : "text-red-300";
+              return (
+                <button key={region.id} onClick={() => onPickRegion(region.id)} className={`text-left border p-3 transition-all ${selected ? "border-[var(--neon)] bg-[var(--neon)]/10" : "border-border bg-card/50 hover:border-foreground/40"}`}>
+                  <div className="flex items-center justify-between gap-2"><span className="font-black uppercase text-sm">{region.city}</span><span className={`font-mono text-xs ${pingColor}`}>{ping === undefined ? "…" : ping === null ? "offline" : `${ping} ms`}</span></div>
+                  <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{region.country} · {region.provider}</div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 text-[10px] text-muted-foreground">Ping измеряется отдельно до шлюза каждого провайдера. Выбранный регион создаёт отдельную очередь и игровую комнату.</div>
+        </div>
+      )}
 
       {/* Modes */}
       <div className="grid md:grid-cols-3 gap-4 mb-10">

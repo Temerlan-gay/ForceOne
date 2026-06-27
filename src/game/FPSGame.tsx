@@ -4,7 +4,7 @@ import type { GameConfig, RunState } from "@/game/types";
 import { addMatchResult, loadProfile, type Profile } from "@/game/profile";
 import type { Settings } from "@/game/settings";
 import type { Agent } from "@/game/data/agents";
-import { WEAPONS, type Weapon } from "@/game/data/weapons";
+import { CATEGORIES, WEAPONS, type Weapon } from "@/game/data/weapons";
 import { AgentAvatar } from "@/game/AgentAvatar";
 import { playAgentLine, prefetchAgentLines } from "@/game/voice";
 import {
@@ -261,11 +261,11 @@ export function FPSGame({
 
           {/* Crosshair */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative w-6 h-6">
-              <div className="absolute left-1/2 top-0 w-px h-2 bg-accent -translate-x-1/2" />
-              <div className="absolute left-1/2 bottom-0 w-px h-2 bg-accent -translate-x-1/2" />
-              <div className="absolute top-1/2 left-0 h-px w-2 bg-accent -translate-y-1/2" />
-              <div className="absolute top-1/2 right-0 h-px w-2 bg-accent -translate-y-1/2" />
+            <div className="relative w-12 h-12">
+              <div className="absolute left-1/2 w-px h-2 bg-accent -translate-x-1/2 transition-all duration-75" style={{ bottom: `calc(50% + ${4 + state.spread * 12}px)` }} />
+              <div className="absolute left-1/2 w-px h-2 bg-accent -translate-x-1/2 transition-all duration-75" style={{ top: `calc(50% + ${4 + state.spread * 12}px)` }} />
+              <div className="absolute top-1/2 h-px w-2 bg-accent -translate-y-1/2 transition-all duration-75" style={{ right: `calc(50% + ${4 + state.spread * 12}px)` }} />
+              <div className="absolute top-1/2 h-px w-2 bg-accent -translate-y-1/2 transition-all duration-75" style={{ left: `calc(50% + ${4 + state.spread * 12}px)` }} />
               <div className="absolute left-1/2 top-1/2 w-0.5 h-0.5 bg-accent -translate-x-1/2 -translate-y-1/2" />
             </div>
           </div>
@@ -366,29 +366,33 @@ export function FPSGame({
           {round.phase === "buy" && <BuyPhaseOverlay round={round} agent={agent} />}
           {buyMenuOpen && round.phase === "buy" && (
             <div className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-8">
-              <div className="w-full max-w-5xl max-h-[82vh] overflow-auto bg-card border border-border p-6 clip-corner">
+              <div className="w-full max-w-7xl h-[86vh] overflow-auto bg-[#0d171a] border border-[#6d7f7d] p-6">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <div className="text-2xl font-black uppercase">Магазин оружия</div>
-                    <div className="text-xs text-muted-foreground">Пистолеты занимают слот 2, остальное — слот 1</div>
+                    <div className="text-2xl font-black uppercase tracking-[0.18em]">Купить оружие</div>
+                    <div className="text-xs text-[#9aadaa]">B — закрыть · оружие сохраняется в слотах 1 и 2</div>
                   </div>
-                  <div className="text-xl font-black text-[var(--neon)]">{credits} кредитов</div>
+                  <div className="border-l border-[#526563] pl-6 text-right"><div className="text-[10px] uppercase text-[#9aadaa]">Баланс</div><div className="text-2xl font-black text-[#c8f5e7]">¤ {credits}</div></div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {WEAPONS.map((weapon) => (
-                    <button
-                      key={weapon.id}
-                      disabled={credits < weapon.price}
-                      onClick={() => buyWeapon(weapon)}
-                      className="text-left border border-border bg-background/60 hover:border-primary p-4 disabled:opacity-35 disabled:hover:border-border"
-                    >
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{weapon.category}</div>
-                      <div className="font-black text-lg">{weapon.name}</div>
-                      <div className="mt-3 flex justify-between text-xs"><span>Урон {weapon.damage}</span><span>{weapon.price}</span></div>
-                    </button>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {CATEGORIES.map((category) => (
+                    <section key={category}>
+                      <div className="mb-1 px-2 py-1 bg-[#263637] text-[10px] font-black uppercase tracking-[0.2em] text-[#c8d4d1]">{category}</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {WEAPONS.filter((weapon) => weapon.category === category).map((weapon) => {
+                          const equipped = state.equippedName === weapon.name;
+                          return <button key={weapon.id} disabled={credits < weapon.price} onClick={() => buyWeapon(weapon)} className={`relative min-h-28 text-left border p-3 transition-colors ${equipped ? "border-[#8fffd9] bg-[#315b52]" : "border-[#405354] bg-[#162325] hover:bg-[#243638] hover:border-[#91aaa6]"} disabled:opacity-30`}>
+                            <div className="font-black uppercase text-sm">{weapon.name}</div>
+                            <div className="mt-4 h-1 bg-[#2f4142] overflow-hidden"><div className="h-full bg-[#b9d4ce]" style={{ width: `${weapon.accuracy}%` }} /></div>
+                            <div className="mt-2 flex justify-between text-[10px] text-[#a8bab6]"><span>{weapon.damage} DMG · {weapon.magazine} MAG</span><span className="font-black text-white">¤ {weapon.price}</span></div>
+                            {equipped && <div className="absolute right-2 top-2 text-[9px] font-black text-[#8fffd9]">КУПЛЕНО</div>}
+                          </button>;
+                        })}
+                      </div>
+                    </section>
                   ))}
                 </div>
-                <div className="mt-5 text-xs text-muted-foreground">B — закрыть · 1 — основное · 2 — пистолет · 3 — нож · 4 — бомба</div>
+                <div className="sticky bottom-0 mt-5 border-t border-[#526563] bg-[#0d171a]/95 pt-3 text-xs text-[#9aadaa]">1 — основное · 2 — пистолет · 3 — нож · 4 — бомба</div>
               </div>
             </div>
           )}

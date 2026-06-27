@@ -81,6 +81,8 @@ export class FPSEngine {
   private primaryWeapon: Weapon | null = null;
   private pistolWeapon: Weapon = WEAPONS.find((weapon) => weapon.id === "falcon")!;
   private equippedSlot: 1 | 2 | 3 | 4 = 2;
+  private sprayShot = 0;
+  private timeSinceShot = 1;
 
   // ---- Theme / day-night state ----
   private hemi!: THREE.HemisphereLight;
@@ -166,6 +168,9 @@ export class FPSEngine {
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.style.display = "block";
     this.renderer.domElement.style.cursor = "crosshair";
+    // Restrained color grading: crisp tactical readability without neon-heavy,
+    // arcade-like saturation.
+    this.renderer.domElement.style.filter = "contrast(1.06) saturate(0.9) brightness(1.01)";
 
     this.camera = new THREE.PerspectiveCamera(
       settings.fov,
@@ -176,8 +181,9 @@ export class FPSEngine {
     const pal = this.getPalette();
     this.dynamicCycle = !!cfg.dynamicCycle;
     this.scene.background = new THREE.Color(pal.sky);
-    const fogNear = settings.graphics === "low" ? 20 : settings.graphics === "medium" ? 30 : 50;
-    const fogFar = settings.graphics === "low" ? 60 : settings.graphics === "medium" ? 90 : 140;
+    const mapHalf = this.getMapLayout().halfSize;
+    const fogNear = settings.graphics === "low" ? mapHalf * 0.7 : mapHalf * 1.15;
+    const fogFar = settings.graphics === "low" ? mapHalf * 1.7 : mapHalf * 2.65;
     this.scene.fog = new THREE.Fog(pal.fog, fogNear, fogFar);
     this.addSkyDome(pal.sky, pal.fog);
 
@@ -326,7 +332,7 @@ export class FPSEngine {
     base: number,
     scale = 8,
   ): { map: THREE.CanvasTexture; bumpMap: THREE.CanvasTexture } {
-    const size = 256;
+    const size = this.settings.graphics === "high" ? 512 : 256;
     const color = new THREE.Color(base);
     const canvas = document.createElement("canvas");
     const bump = document.createElement("canvas");
@@ -341,7 +347,10 @@ export class FPSEngine {
     btx.fillStyle = "#808080";
     btx.fillRect(0, 0, size, size);
 
-    const flecks = theme === "snow" ? 420 : theme === "sand" ? 720 : theme === "wood" ? 260 : 520;
+    const detailMultiplier = size / 256;
+    const flecks =
+      (theme === "snow" ? 420 : theme === "sand" ? 720 : theme === "wood" ? 260 : 520) *
+      detailMultiplier;
     for (let i = 0; i < flecks; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
@@ -410,12 +419,16 @@ export class FPSEngine {
 
     const map = new THREE.CanvasTexture(canvas);
     const bumpMap = new THREE.CanvasTexture(bump);
+    map.colorSpace = THREE.SRGBColorSpace;
+    bumpMap.colorSpace = THREE.NoColorSpace;
     for (const tex of [map, bumpMap]) {
-      tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
       tex.repeat.set(scale, scale);
-      tex.anisotropy = this.settings.graphics === "high" ? 8 : 2;
+      tex.anisotropy =
+        this.settings.graphics === "high"
+          ? Math.min(16, this.renderer.capabilities.getMaxAnisotropy())
+          : 4;
     }
     return { map, bumpMap };
   }
@@ -450,7 +463,9 @@ export class FPSEngine {
     const scale = kind === "ground" ? 18 : kind === "crate" ? 2.4 : 5;
     const tex = this.makeCanvasTexture(textureTheme, base, scale);
     return new THREE.MeshStandardMaterial({
-      color: base,
+      // The albedo texture already contains the base color. Multiplying it by
+      // the same color a second time crushed midtones and looked cartoonishly dark.
+      color: 0xffffff,
       map: tex.map,
       bumpMap: tex.bumpMap,
       bumpScale:
@@ -584,21 +599,22 @@ export class FPSEngine {
     this.hemi = new THREE.HemisphereLight(pal.hemiSky, pal.hemiGround, pal.hemiInt);
     this.scene.add(this.hemi);
     this.dirLight = new THREE.DirectionalLight(pal.sunCol, pal.sunInt);
-    this.dirLight.position.set(30, 60, 20);
+    const shadowExtent = this.getMapLayout().halfSize + 4;
+    this.dirLight.position.set(shadowExtent * 0.65, shadowExtent * 1.25, shadowExtent * 0.45);
     this.dirLight.castShadow = this.settings.graphics !== "low";
     this.dirLight.shadow.mapSize.set(
-      this.settings.graphics === "high" ? 2048 : 1024,
-      this.settings.graphics === "high" ? 2048 : 1024,
+      this.settings.graphics === "high" ? 4096 : 2048,
+      this.settings.graphics === "high" ? 4096 : 2048,
     );
     this.dirLight.shadow.camera.near = 1;
     this.dirLight.shadow.camera.far = 140;
-    this.dirLight.shadow.camera.left = -55;
-    this.dirLight.shadow.camera.right = 55;
-    this.dirLight.shadow.camera.top = 55;
-    this.dirLight.shadow.camera.bottom = -55;
+    this.dirLight.shadow.camera.left = -shadowExtent;
+    this.dirLight.shadow.camera.right = shadowExtent;
+    this.dirLight.shadow.camera.top = shadowExtent;
+    this.dirLight.shadow.camera.bottom = -shadowExtent;
     this.dirLight.shadow.bias = -0.00018;
     this.dirLight.shadow.normalBias = 0.025;
-    this.dirLight.shadow.radius = this.settings.graphics === "high" ? 3 : 1;
+    this.dirLight.shadow.radius = this.settings.graphics === "high" ? 2 : 1;
     this.scene.add(this.dirLight);
 
     // Theme accent fills (warm lanterns in temple, cold pools in arctic, neon in neon city...)
@@ -1407,7 +1423,8 @@ export class FPSEngine {
   }
 
   private reload() {
-    if (this.run.reloading > 0 || this.run.mag === 25 || this.run.ammo === 0) return;
+    const weapon = this.equippedSlot === 1 ? this.primaryWeapon : this.equippedSlot === 2 ? this.pistolWeapon : null;
+    if (!weapon || this.run.reloading > 0 || this.run.mag === weapon.magazine || this.run.ammo === 0) return;
     this.run.reloading = 2;
   }
 
@@ -1868,13 +1885,27 @@ export class FPSEngine {
     r.fireCd = knife ? 0.55 : 1 / (weapon?.fireRate ?? 10);
     const moving =
       this.keys.has("w") || this.keys.has("a") || this.keys.has("s") || this.keys.has("d");
-    const baseSpread = moving ? 0.04 : 0.005;
-    const spread = baseSpread + r.spread;
+    if (this.timeSinceShot > 0.24) this.sprayShot = 0;
+    const accuracy = (weapon?.accuracy ?? 75) / 100;
+    const firstShotSpread = knife ? 0.03 : (1 - accuracy) * 0.012;
+    const movementSpread = moving ? 0.075 : 0;
+    const spraySpread = Math.min(0.065, this.sprayShot * 0.0032);
+    const spread = firstShotSpread + movementSpread + spraySpread;
     const dir = new THREE.Vector3();
     this.camera.getWorldDirection(dir);
     dir.x += (Math.random() - 0.5) * spread;
     dir.y += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
+    // Repeatable spray bias: mostly vertical for the first bullets, then a
+    // controlled left-right weave that players can learn and compensate for.
+    if (!knife) {
+      const horizontalPattern = Math.sin(this.sprayShot * 0.78) * Math.max(0, this.sprayShot - 3) * 0.0012;
+      dir.x += horizontalPattern;
+      this.pitch = Math.min(Math.PI / 2 - 0.05, this.pitch + Math.min(0.012, 0.0038 + this.sprayShot * 0.00045));
+      this.yaw += horizontalPattern * 0.22;
+      this.sprayShot++;
+      this.timeSinceShot = 0;
+    }
     dir.normalize();
 
     const origin = this.playerPos.clone();
@@ -1916,7 +1947,7 @@ export class FPSEngine {
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffd166 }));
     this.scene.add(line);
     this.tracers.push({ line, life: 0.08 });
-    r.spread = Math.min(0.18, r.spread + 0.025);
+    r.spread = Math.min(1, spread / 0.14);
   }
 
   private damageBot(b: Bot, dmg: number) {
@@ -2222,6 +2253,7 @@ export class FPSEngine {
       mz /= len;
     }
     this.tryMove(mx * speed * dt, mz * speed * dt);
+    if (len > 0) r.spread = Math.max(r.spread, 0.48);
     this.camera.position.copy(this.playerPos);
     this.updateObjective(dt);
 
@@ -2229,15 +2261,20 @@ export class FPSEngine {
     if (r.reloading > 0) {
       r.reloading -= dt;
       if (r.reloading <= 0) {
-        const need = 25 - r.mag;
+        const weapon = this.equippedSlot === 1 ? this.primaryWeapon : this.pistolWeapon;
+        const need = (weapon?.magazine ?? 25) - r.mag;
         const take = Math.min(need, r.ammo);
         r.mag += take;
         r.ammo -= take;
       }
     }
     r.fireCd = Math.max(0, r.fireCd - dt);
+    this.timeSinceShot += dt;
     if (this.mouseDown && this.pointerLocked) this.shoot();
-    r.spread = Math.max(0, r.spread - dt * 0.5);
+    if (this.timeSinceShot > 0.16 && len === 0) {
+      r.spread = Math.max(0, r.spread - dt * 4.5);
+      if (this.timeSinceShot > 0.28) this.sprayShot = 0;
+    }
     if (r.flashed > 0) r.flashed -= dt;
 
     // abilities cd
@@ -2435,6 +2472,8 @@ export class FPSEngine {
   equipSlot(slot: 1 | 2 | 3 | 4) {
     if (slot === 1 && !this.primaryWeapon) return;
     this.equippedSlot = slot;
+    this.sprayShot = 0;
+    this.timeSinceShot = 1;
     const weapon = slot === 1 ? this.primaryWeapon : slot === 2 ? this.pistolWeapon : null;
     this.run.equippedSlot = slot;
     this.run.equippedName = slot === 3 ? "Нож" : slot === 4 ? "Бомба" : weapon?.name ?? "Оружие";

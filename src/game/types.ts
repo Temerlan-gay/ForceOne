@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Agent } from "@/game/data/agents";
 import type { SiteKey } from "@/game/data/maps";
+import type { ServerRegionId } from "@/game/data/regions";
 
 export type MatchMode = "quick" | "unranked" | "ranked";
 
@@ -13,6 +14,7 @@ export type GameConfig = {
   botCount: number;
   multiplayer?: boolean;
   room?: string;
+  regionId?: ServerRegionId;
   playerName?: string;
   mapId?: string;
   mapTheme?: MapTheme;
