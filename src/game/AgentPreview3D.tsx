@@ -6,6 +6,8 @@ import { buildAgentModel } from "@/game/agent-model";
 /** Rotating 3D preview of an agent. Used on the Agent Select screen. */
 export function AgentPreview3D({ agent, className }: { agent: Agent; className?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const modelRef = useRef<THREE.Group | null>(null);
   const [previewUnavailable, setPreviewUnavailable] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
     };
 
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
     camera.position.set(0, 1.6, 4.6);
     camera.lookAt(0, 1.4, 0);
@@ -96,6 +99,7 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
     scene.add(shards);
 
     const model = buildAgentModel(agent);
+    modelRef.current = model;
     scene.add(model);
 
     host.appendChild(renderer.domElement);
@@ -109,16 +113,23 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
     const clock = new THREE.Clock();
     const tick = () => {
       const t = clock.getElapsedTime();
-      model.rotation.y = t * 0.5;
+      const activeModel = modelRef.current;
+      if (activeModel) activeModel.rotation.y = t * 0.5;
       // subtle idle bob
-      model.position.y = Math.sin(t * 1.4) * 0.03;
+      if (activeModel) activeModel.position.y = Math.sin(t * 1.4) * 0.03;
       ring.rotation.z = -t * 0.3;
       outerRing.rotation.z = t * 0.18;
       shards.rotation.y = -t * 0.22;
       shards.children.forEach((child, i) => {
         child.position.y = child.userData.baseY + Math.sin(t * 1.8 + i) * 0.035;
       });
-      renderer.render(scene, camera);
+      try {
+        renderer.render(scene, camera);
+      } catch (error) {
+        console.warn("3D agent preview render failed", error);
+        setPreviewUnavailable(true);
+        return;
+      }
       raf = requestAnimationFrame(tick);
     };
     tick();
@@ -135,8 +146,40 @@ export function AgentPreview3D({ agent, className }: { agent: Agent; className?:
       renderer.renderLists.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
+      sceneRef.current = null;
+      modelRef.current = null;
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
     };
+    // The renderer lives for the whole selection screen. Agent changes only
+    // replace the model in the effect below, avoiding WebGL context churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const previous = modelRef.current;
+    if (!scene) return;
+
+    if (previous) {
+      scene.remove(previous);
+      previous.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        mesh.geometry?.dispose();
+        const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+        for (const material of materials) material.dispose();
+      });
+    }
+
+    try {
+      const next = buildAgentModel(agent);
+      scene.add(next);
+      modelRef.current = next;
+      setPreviewUnavailable(false);
+    } catch (error) {
+      console.warn("Agent model could not be created", error);
+      modelRef.current = null;
+      setPreviewUnavailable(true);
+    }
   }, [agent]);
 
   return (

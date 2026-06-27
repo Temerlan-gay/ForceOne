@@ -56,7 +56,7 @@ export function App() {
   const [pendingMode, setPendingMode] = useState<MatchMode | null>(null);
   const [rolledMap, setRolledMap] = useState<GameMap | null>(null);
   const [serverRegion, setServerRegion] = useState<ServerRegionId>(() =>
-    (localStorage.getItem("force_one_region") as ServerRegionId) || "kz-astana",
+    (typeof window !== "undefined" ? localStorage.getItem("force_one_region") as ServerRegionId : null) || "kz-astana",
   );
 
   // Hydrate profile from DB when the user signs in
@@ -468,7 +468,7 @@ function PlayPage({
             </div>
             <div className="text-xs text-muted-foreground">
               {multiplayer
-                ? `Реальные игроки в комнате «${map.id}-{режим}». Боты остаются для замеса.`
+                ? `Регион ${SERVER_REGIONS.find((region) => region.id === serverRegion)?.city}. Отдельная очередь «${serverRegion}:${map.id}-{режим}».`
                 : "Только ты и боты. Без соединения с сервером."}
             </div>
           </div>
@@ -513,7 +513,7 @@ function PlayPage({
           tag="01"
           title="Быстрая игра"
           subtitle="Без подбора, мгновенный старт"
-          details="10 фрагов · 3 бота · Base XP"
+          details="10 фрагов · 5 на 5 · Base XP"
           icon={<Zap className="w-8 h-8" />}
           variant="accent"
           onClick={() => onStart("quick")}
@@ -522,7 +522,7 @@ function PlayPage({
           tag="02"
           title="Безранговый"
           subtitle="Полноценный матч без ранга"
-          details="15 фрагов · 4 бота · +50% XP"
+          details="15 фрагов · 5 на 5 · +50% XP"
           icon={<Swords className="w-8 h-8" />}
           variant="primary"
           onClick={() => onStart("unranked")}
@@ -531,7 +531,7 @@ function PlayPage({
           tag="03"
           title="Рейтинговый"
           subtitle={rankedLocked ? "Открывается с 15 уровня" : "Матч за место в таблице"}
-          details="20 фрагов · 5 ботов · +100% XP · ранг"
+          details="20 фрагов · 5 на 5 · +100% XP · ранг"
           icon={rankedLocked ? <Lock className="w-8 h-8" /> : <Trophy className="w-8 h-8" />}
           variant="pink"
           locked={rankedLocked}
