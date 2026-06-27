@@ -29,7 +29,7 @@ export type RoundConfig = {
 };
 
 export const ROUND_CONFIG: RoundConfig = {
-  buySec: 8,
+  buySec: 15,
   liveSec: 100,
   endSec: 5,
   killTarget: 3,

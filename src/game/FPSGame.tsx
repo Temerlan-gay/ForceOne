@@ -4,6 +4,7 @@ import type { GameConfig, RunState } from "@/game/types";
 import { addMatchResult, loadProfile, type Profile } from "@/game/profile";
 import type { Settings } from "@/game/settings";
 import type { Agent } from "@/game/data/agents";
+import { WEAPONS, type Weapon } from "@/game/data/weapons";
 import { AgentAvatar } from "@/game/AgentAvatar";
 import { playAgentLine, prefetchAgentLines } from "@/game/voice";
 import {
@@ -37,6 +38,8 @@ export function FPSGame({
   const engineRef = useRef<FPSEngine | null>(null);
   const [state, setState] = useState<RunState | null>(null);
   const [needsClick, setNeedsClick] = useState(true);
+  const [buyMenuOpen, setBuyMenuOpen] = useState(false);
+  const [credits, setCredits] = useState(8000);
 
   // ===== Round/match state (client-side competitive layer) =====
   const [round, setRound] = useState<RoundState>(() => createInitialRound());
@@ -103,6 +106,32 @@ export function FPSGame({
     engineRef.current?.updateSettings(settings);
   }, [settings]);
 
+  useEffect(() => {
+    const onLoadoutKey = (event: KeyboardEvent) => {
+      if (event.code === "KeyB") {
+        if (roundRef.current.phase !== "buy") return;
+        setBuyMenuOpen((open) => {
+          if (!open) document.exitPointerLock();
+          return !open;
+        });
+        return;
+      }
+      const slots: Record<string, 1 | 2 | 3 | 4> = {
+        Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4,
+      };
+      const slot = slots[event.code];
+      if (slot) engineRef.current?.equipSlot(slot);
+    };
+    window.addEventListener("keydown", onLoadoutKey);
+    return () => window.removeEventListener("keydown", onLoadoutKey);
+  }, []);
+
+  const buyWeapon = (weapon: Weapon) => {
+    if (round.phase !== "buy" || credits < weapon.price) return;
+    setCredits((value) => value - weapon.price);
+    engineRef.current?.purchaseWeapon(weapon);
+  };
+
   // ===== Round phase ticker =====
   useEffect(() => {
     const id = setInterval(() => {
@@ -114,6 +143,7 @@ export function FPSGame({
       const liveDeaths = (state?.deaths ?? 0) - baseDeathsRef.current;
 
       if (r.phase === "buy" && now >= r.phaseEndAt) {
+        setBuyMenuOpen(false);
         engine.setPaused(false);
         setRound({
           ...r,
@@ -317,6 +347,9 @@ export function FPSGame({
             </div>
 
             <div className="bg-card/80 backdrop-blur px-5 py-3 border border-border text-right min-w-44 clip-corner">
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                {state.equippedSlot} · {state.equippedName}
+              </div>
               <div className="text-4xl font-black text-primary leading-none">
                 {state.mag}
                 <span className="text-lg text-muted-foreground"> / {state.ammo}</span>
@@ -331,6 +364,34 @@ export function FPSGame({
 
           {/* Phase overlays */}
           {round.phase === "buy" && <BuyPhaseOverlay round={round} agent={agent} />}
+          {buyMenuOpen && round.phase === "buy" && (
+            <div className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-8">
+              <div className="w-full max-w-5xl max-h-[82vh] overflow-auto bg-card border border-border p-6 clip-corner">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <div className="text-2xl font-black uppercase">Магазин оружия</div>
+                    <div className="text-xs text-muted-foreground">Пистолеты занимают слот 2, остальное — слот 1</div>
+                  </div>
+                  <div className="text-xl font-black text-[var(--neon)]">{credits} кредитов</div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {WEAPONS.map((weapon) => (
+                    <button
+                      key={weapon.id}
+                      disabled={credits < weapon.price}
+                      onClick={() => buyWeapon(weapon)}
+                      className="text-left border border-border bg-background/60 hover:border-primary p-4 disabled:opacity-35 disabled:hover:border-border"
+                    >
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{weapon.category}</div>
+                      <div className="font-black text-lg">{weapon.name}</div>
+                      <div className="mt-3 flex justify-between text-xs"><span>Урон {weapon.damage}</span><span>{weapon.price}</span></div>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-5 text-xs text-muted-foreground">B — закрыть · 1 — основное · 2 — пистолет · 3 — нож · 4 — бомба</div>
+              </div>
+            </div>
+          )}
           {round.phase === "end" && <RoundEndOverlay round={round} />}
           {round.phase === "match-end" && (
             <MatchEndOverlay round={round} agent={agent} onExit={handleMatchExit} />

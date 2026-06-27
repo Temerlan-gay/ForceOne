@@ -81,6 +81,8 @@ export type RunState = {
   msgTimer: number;
   onlinePlayers: number;
   objective: ObjectiveState;
+  equippedSlot: 1 | 2 | 3 | 4;
+  equippedName: string;
 };
 
 export function makeRun(cfg: GameConfig): RunState {
@@ -146,5 +148,7 @@ export function makeRun(cfg: GameConfig): RunState {
       timeLeft: 40,
       detonateAfter: 40,
     },
+    equippedSlot: 2,
+    equippedName: "Falcon",
   };
 }

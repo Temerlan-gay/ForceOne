@@ -6,6 +6,7 @@ import { Multiplayer } from "./multiplayer";
 import { buildAgentModel } from "./agent-model";
 import { AGENTS } from "./data/agents";
 import { MAPS, type MapLayout } from "./data/maps";
+import { WEAPONS, type Weapon } from "./data/weapons";
 
 // Map physical key codes -> logical action so the game works regardless of
 // keyboard layout (русская/английская и т.п.)
@@ -77,6 +78,9 @@ export class FPSEngine {
 
   private settings: Settings;
   private paused = false;
+  private primaryWeapon: Weapon | null = null;
+  private pistolWeapon: Weapon = WEAPONS.find((weapon) => weapon.id === "falcon")!;
+  private equippedSlot: 1 | 2 | 3 | 4 = 2;
 
   // ---- Theme / day-night state ----
   private hemi!: THREE.HemisphereLight;
@@ -1856,9 +1860,12 @@ export class FPSEngine {
 
   private shoot() {
     const r = this.run;
-    if (r.fireCd > 0 || r.mag <= 0 || r.reloading > 0 || r.flashed > 0) return;
-    r.mag--;
-    r.fireCd = 0.1;
+    if (this.equippedSlot === 4 || (this.equippedSlot === 1 && !this.primaryWeapon)) return;
+    const knife = this.equippedSlot === 3;
+    const weapon = this.equippedSlot === 1 ? this.primaryWeapon : this.pistolWeapon;
+    if (r.fireCd > 0 || (!knife && r.mag <= 0) || r.reloading > 0 || r.flashed > 0) return;
+    if (!knife) r.mag--;
+    r.fireCd = knife ? 0.55 : 1 / (weapon?.fireRate ?? 10);
     const moving =
       this.keys.has("w") || this.keys.has("a") || this.keys.has("s") || this.keys.has("d");
     const baseSpread = moving ? 0.04 : 0.005;
@@ -1871,7 +1878,7 @@ export class FPSEngine {
     dir.normalize();
 
     const origin = this.playerPos.clone();
-    const ray = new THREE.Raycaster(origin, dir, 0, 200);
+    const ray = new THREE.Raycaster(origin, dir, 0, knife ? 2.6 : 200);
 
     // hit bots first
     const botMeshes: THREE.Object3D[] = [];
@@ -1892,7 +1899,8 @@ export class FPSEngine {
       const bot = this.bots.find((b) => b.mesh === obj);
       if (bot && bot.alive) {
         const headHit = h.point.y > bot.pos.y + 1.5;
-        const dmg = headHit ? 120 : 35;
+        const baseDamage = knife ? 55 : (weapon?.damage ?? 35);
+        const dmg = headHit ? baseDamage * (weapon?.hsMul ?? 2) : baseDamage;
         this.damageBot(bot, dmg);
       }
     }
@@ -2007,9 +2015,9 @@ export class FPSEngine {
 
     const site = this.getCurrentPlantSite();
     objective.site = site?.key ?? null;
-    objective.canPlant = !!site && objective.carryingPack;
+    objective.canPlant = !!site && objective.carryingPack && this.equippedSlot === 4;
 
-    if (!site || !objective.carryingPack || !this.keys.has("f")) {
+    if (!site || !objective.carryingPack || this.equippedSlot !== 4 || !this.keys.has("f")) {
       if (objective.phase === "planting") {
         objective.phase = "carried";
         objective.plantProgress = 0;
@@ -2418,6 +2426,27 @@ export class FPSEngine {
     return this.run;
   }
 
+  purchaseWeapon(weapon: Weapon) {
+    if (weapon.category === "Pistol") this.pistolWeapon = weapon;
+    else this.primaryWeapon = weapon;
+    this.equipSlot(weapon.category === "Pistol" ? 2 : 1);
+  }
+
+  equipSlot(slot: 1 | 2 | 3 | 4) {
+    if (slot === 1 && !this.primaryWeapon) return;
+    this.equippedSlot = slot;
+    const weapon = slot === 1 ? this.primaryWeapon : slot === 2 ? this.pistolWeapon : null;
+    this.run.equippedSlot = slot;
+    this.run.equippedName = slot === 3 ? "Нож" : slot === 4 ? "Бомба" : weapon?.name ?? "Оружие";
+    if (weapon) {
+      this.run.mag = weapon.magazine;
+      this.run.ammo = weapon.magazine * 3;
+    } else if (slot === 3 || slot === 4) {
+      this.run.mag = 0;
+      this.run.ammo = 0;
+    }
+  }
+
   // ===== Round-system helpers (used by FPSGame HUD) =====
   setPaused(v: boolean) {
     this.paused = v;
@@ -2488,6 +2517,7 @@ export class FPSEngine {
       b.mesh.visible = true;
       if (!b.mesh.parent) this.scene.add(b.mesh);
     }
+    this.equipSlot(this.primaryWeapon ? 1 : 2);
   }
 
   dispose() {
