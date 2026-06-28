@@ -186,10 +186,10 @@ export function App() {
         onSignOut={signOut}
       />
 
-      <div className="relative flex-1 flex">
+      <div className="relative flex-1 flex flex-col min-h-0">
         <SideNav nav={nav} onChange={setNav} />
 
-        <main className="flex-1 overflow-y-auto px-8 py-8">
+        <main className="flex-1 overflow-y-auto px-5 md:px-10 py-8">
           {lastResult && (
             <div
               className={`mb-6 p-4 rounded-md border backdrop-blur clip-corner ${
@@ -335,7 +335,7 @@ function LogoMark() {
   );
 }
 
-/* ---------- Side nav ---------- */
+/* ---------- Valorant-style horizontal lobby navigation ---------- */
 function SideNav({ nav, onChange }: { nav: NavKey; onChange: (n: NavKey) => void }) {
   const items: { key: NavKey; label: string; Icon: React.ComponentType<{ className?: string }> }[] =
     [
@@ -349,39 +349,35 @@ function SideNav({ nav, onChange }: { nav: NavKey; onChange: (n: NavKey) => void
     ];
 
   return (
-    <aside className="relative z-10 w-60 shrink-0 border-r border-border bg-sidebar/60 backdrop-blur py-6 px-3 hidden md:flex flex-col gap-1">
+    <nav className="relative z-10 shrink-0 border-b border-border bg-[#0b1218]/90 backdrop-blur px-4 md:px-8 flex items-stretch gap-1 overflow-x-auto">
       {items.map(({ key, label, Icon }) => {
         const active = nav === key;
         return (
           <button
             key={key}
             onClick={() => onChange(key)}
-            className={`group relative flex items-center gap-3 px-3 py-2.5 text-left transition-all clip-corner ${
+            className={`group relative flex items-center gap-2 px-4 py-3.5 text-left transition-all border-x ${
               active
-                ? "bg-primary/15 text-foreground border border-primary/60 border-glow-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-card/60 border border-transparent"
+                ? "bg-white/10 text-foreground border-white/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border-transparent"
             }`}
           >
             {active && (
-              <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[var(--neon)]" />
+              <span className="absolute left-3 right-3 bottom-0 h-0.5 bg-primary" />
             )}
-            <Icon className={`w-4 h-4 ${active ? "text-[var(--neon)]" : ""}`} />
-            <span className="text-sm font-bold uppercase tracking-wider">{label}</span>
-            {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-[var(--neon)]" />}
+            <Icon className={`w-3.5 h-3.5 ${active ? "text-primary" : ""}`} />
+            <span className="text-xs font-black uppercase tracking-[0.16em] whitespace-nowrap">{label}</span>
           </button>
         );
       })}
 
-      <div className="mt-auto pt-6 border-t border-border">
-        <div className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] mb-2 px-3">
-          Online
-        </div>
-        <div className="px-3 flex items-center gap-2">
+      <div className="ml-auto hidden lg:flex items-center border-l border-border pl-5">
+        <div className="px-3 flex items-center gap-2 whitespace-nowrap">
           <span className="w-2 h-2 rounded-full bg-[var(--neon)] animate-pulse" />
           <span className="text-xs text-muted-foreground">12 437 игроков</span>
         </div>
       </div>
-    </aside>
+    </nav>
   );
 }
 

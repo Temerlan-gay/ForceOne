@@ -115,10 +115,10 @@ export function makeRun(cfg: GameConfig): RunState {
       },
       q: {
         name: agent?.abilities.q ?? "Flash",
-        charges: agent?.role === "Initiator" ? 2 : 1,
-        max: agent?.role === "Initiator" ? 2 : 1,
+        charges: controllerSmoke || agent?.role === "Initiator" ? 2 : 1,
+        max: controllerSmoke || agent?.role === "Initiator" ? 2 : 1,
         cd: 0,
-        cooldown: agent?.role === "Initiator" ? 9 : 12,
+        cooldown: controllerSmoke ? 30 : agent?.role === "Initiator" ? 9 : 12,
       },
       e: {
         name: agent?.abilities.e ?? "Dash",
@@ -132,7 +132,7 @@ export function makeRun(cfg: GameConfig): RunState {
         charges: 1,
         max: 1,
         cd: 0,
-        cooldown: controllerSmoke ? 18 : 22,
+        cooldown: 22,
       },
     },
     finished: false,

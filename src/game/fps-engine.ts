@@ -1434,7 +1434,8 @@ export class FPSEngine {
     if (ab.cd > 0 && ab.charges <= 0) return;
 
     const agent = this.cfg.agent;
-    if (agent?.role === "Controller" && (k === "q" || k === "e" || k === "x")) {
+    // Controllers get one tactical-map ability only: Q is their smoke slot.
+    if (agent?.role === "Controller" && k === "q") {
       this.openSmokePlanner(k);
       return;
     }
@@ -1450,11 +1451,47 @@ export class FPSEngine {
       this.useInitiatorAbility(k, agent.id, target, forward);
     } else if (agent?.role === "Sentinel") {
       this.useSentinelAbility(k, agent.id, target, forward);
+    } else if (agent?.role === "Controller") {
+      this.useControllerAbility(k, agent.id, target, forward);
     } else {
       this.useDuelistAbility(k, agent?.id, target, forward);
     }
     ab.charges--;
     if (ab.cd <= 0) ab.cd = ab.cooldown;
+  }
+
+  private useControllerAbility(
+    k: AbilityKey,
+    agentId: string | undefined,
+    target: THREE.Vector3,
+    forward: THREE.Vector3,
+  ) {
+    if (k === "c") {
+      this.spawnFlash(target, this.cfg.agent?.hue ?? "#8a6bff", 2.4);
+      this.flashBotsFrom(target, agentId === "shadow" ? 3 : 2.2);
+      if (agentId === "frost") this.slowBotsNear(target, 7, 2.5);
+      this.run.message = agentId === "frost" ? "Крио-вспышка" : "Теневая вспышка";
+      this.run.msgTimer = 1.5;
+      return;
+    }
+    if (k === "e") {
+      if (agentId === "shadow") {
+        this.useMobility(agentId, forward, 11);
+        this.run.message = "Теневой телепорт";
+      } else {
+        this.spawnSmoke(target, 5, 5.5, "#9ad8ff");
+        this.slowBotsNear(target, 9, 4);
+        this.run.message = "Замедляющее поле";
+      }
+      this.run.msgTimer = 1.5;
+      return;
+    }
+    // Ultimate is a combat buff/control pulse and never opens the smoke map.
+    this.run.armor = Math.min(100, this.run.armor + 40);
+    this.run.hp = Math.min(100, this.run.hp + 25);
+    for (const bot of this.bots) bot.flashed = Math.max(bot.flashed, agentId === "frost" ? 4 : 2.5);
+    this.run.message = agentId === "frost" ? "Вечная мерзлота: враги замедлены" : "Протокол исчезновения: усиление";
+    this.run.msgTimer = 2.5;
   }
 
   private spendAbility(k: AbilityKey) {
@@ -1697,11 +1734,10 @@ export class FPSEngine {
     const agent = this.cfg.agent;
     if (!planner || !agent) return;
 
-    const duration = planner.key === "x" ? 16 : planner.key === "e" ? 14 : 12;
+    const duration = 15;
     const radius = agent.id === "frost" ? 4.8 : 4.3;
     this.spawnSmoke(planner.selected, duration, radius, agent.hue);
     if (agent.id === "frost") this.slowBotsNear(planner.selected, radius + 2, 2);
-    if (agent.id === "shadow" && planner.key === "x") this.flashBotsFrom(planner.selected, 2);
     this.spendAbility(planner.key);
     this.closeSmokePlanner(true);
   }
@@ -2530,6 +2566,12 @@ export class FPSEngine {
       timeLeft: 40,
       detonateAfter: 40,
     };
+    if (this.cfg.agent?.role === "Controller") {
+      r.abilities.q.charges = 2;
+      r.abilities.q.max = 2;
+      r.abilities.q.cd = 0;
+      r.abilities.q.cooldown = 30;
+    }
     this.clearPlantedPack();
 
     const layout = this.getMapLayout();
